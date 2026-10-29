@@ -1,8 +1,10 @@
 "use client";
 
-import { Chip, Toggle } from "@/components/ui/controls";
+import { Toggle } from "@/components/ui/controls";
 import { Select } from "@/components/ui/form";
-import { WEEKDAY_SHORT } from "@/lib/format";
+import { Icon } from "@/components/ui/icon";
+import { cn } from "@/lib/cn";
+import { WEEKDAY_LONG, WEEKDAY_SHORT } from "@/lib/format";
 import { daySchema } from "@/lib/schemas";
 import type { OwnerHours } from "@/lib/types";
 
@@ -60,19 +62,46 @@ export function rowsToPayload(rows: DayRow[]) {
 }
 
 function TimeSelect({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+  // Horário salvo fora da grade de 30 min (ex.: 08:45) entra como opção, senão o select mostraria 00:00.
+  const options = TIMES.includes(value) ? TIMES : [...TIMES, value].sort();
   return (
     <Select
       aria-label={label}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="min-w-[96px] py-2 text-sm"
+      className="py-2.5 text-center tabular-nums"
     >
-      {TIMES.map((t) => (
+      {options.map((t) => (
         <option key={t} value={t}>
           {t}
         </option>
       ))}
     </Select>
+  );
+}
+
+/** "Abre – Fecha" lado a lado, ocupando a largura disponível. */
+function TimeRange({
+  from,
+  to,
+  onFrom,
+  onTo,
+  fromLabel,
+  toLabel,
+}: {
+  from: string;
+  to: string;
+  onFrom: (v: string) => void;
+  onTo: (v: string) => void;
+  fromLabel: string;
+  toLabel: string;
+}) {
+  return (
+    <div className="grid min-w-0 flex-1 grid-cols-[1fr_auto_1fr] items-center gap-2">
+      <TimeSelect label={fromLabel} value={from} onChange={onFrom} />
+      <span className="text-sm text-muted">até</span>
+      <TimeSelect label={toLabel} value={to} onChange={onTo} />
+    </div>
   );
 }
 
@@ -102,75 +131,101 @@ export function HoursEditor({
           : r,
       ),
     );
+  const openCount = rows.filter((r) => r.open).length;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Dias de atendimento">
-        {rows.map((r) => (
-          <Chip key={r.weekday} selected={r.open} onClick={() => set(r.weekday, { open: !r.open })}>
-            {WEEKDAY_SHORT[r.weekday]}
-          </Chip>
-        ))}
-      </div>
-      <div className="flex flex-col divide-y divide-line-soft rounded-2xl border border-line bg-surface">
-        {rows
-          .filter((r) => r.open)
-          .map((r, i) => (
-            <div key={r.weekday} className="flex flex-col gap-2 p-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <b className="w-10 text-sm">{WEEKDAY_SHORT[r.weekday]}</b>
-                <TimeSelect
-                  label={`Abre ${WEEKDAY_SHORT[r.weekday]}`}
-                  value={r.opensAt}
-                  onChange={(v) => set(r.weekday, { opensAt: v })}
-                />
-                <span className="text-sm text-muted">às</span>
-                <TimeSelect
-                  label={`Fecha ${WEEKDAY_SHORT[r.weekday]}`}
-                  value={r.closesAt}
-                  onChange={(v) => set(r.weekday, { closesAt: v })}
-                />
-                <Toggle
-                  checked={r.hasBreak}
-                  onChange={(v) => set(r.weekday, { hasBreak: v })}
-                  label="Pausa"
-                  showLabel
-                />
-                {i === 0 && rows.filter((x) => x.open).length > 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => applyToAll(r)}
-                    className="ml-auto min-h-9 text-xs font-bold text-primary-strong"
-                  >
-                    Copiar para todos
-                  </button>
-                ) : null}
+    <div className="flex flex-col gap-2">
+      <ul className="m-0 flex list-none flex-col divide-y divide-line-soft rounded-2xl border border-line bg-surface p-0">
+        {rows.map((r) => {
+          const day = WEEKDAY_LONG[r.weekday];
+          const short = WEEKDAY_SHORT[r.weekday];
+          return (
+            <li
+              key={r.weekday}
+              className="flex flex-col gap-3 px-4 py-3.5 sm:grid sm:grid-cols-[190px_1fr] sm:items-start sm:gap-4"
+            >
+              <div className="flex min-h-11 items-center gap-3">
+                <Toggle checked={r.open} onChange={(v) => set(r.weekday, { open: v })} label={`Abrir ${day}`} />
+                <b className={cn("text-[15px]", !r.open && "text-muted")}>{day}</b>
               </div>
-              {r.hasBreak ? (
-                <div className="flex flex-wrap items-center gap-2 pl-12 text-sm text-muted">
-                  Pausa
-                  <TimeSelect
-                    label={`Início da pausa ${WEEKDAY_SHORT[r.weekday]}`}
-                    value={r.breakStart}
-                    onChange={(v) => set(r.weekday, { breakStart: v })}
-                  />
-                  às
-                  <TimeSelect
-                    label={`Fim da pausa ${WEEKDAY_SHORT[r.weekday]}`}
-                    value={r.breakEnd}
-                    onChange={(v) => set(r.weekday, { breakEnd: v })}
-                  />
+
+              {r.open ? (
+                <div className="flex min-w-0 flex-col gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <TimeRange
+                      from={r.opensAt}
+                      to={r.closesAt}
+                      onFrom={(v) => set(r.weekday, { opensAt: v })}
+                      onTo={(v) => set(r.weekday, { closesAt: v })}
+                      fromLabel={`Abre ${short}`}
+                      toLabel={`Fecha ${short}`}
+                    />
+                    {openCount > 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => applyToAll(r)}
+                        title="Copiar para os outros dias abertos"
+                        aria-label={`Copiar horário de ${day} para os outros dias abertos`}
+                        className="grid size-11 shrink-0 place-items-center rounded-[10px] text-muted hover:bg-soft hover:text-ink"
+                      >
+                        <Icon name="content_copy" size={20} />
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {r.hasBreak ? (
+                    <div className="flex flex-col gap-1.5 rounded-xl bg-panel-bg p-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-[13px] font-semibold text-ink-2">
+                          <Icon name="restaurant" size={16} />
+                          Intervalo
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => set(r.weekday, { hasBreak: false })}
+                          className="min-h-9 px-1 text-[13px] font-semibold text-muted hover:text-danger"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                      <TimeRange
+                        from={r.breakStart}
+                        to={r.breakEnd}
+                        onFrom={(v) => set(r.weekday, { breakStart: v })}
+                        onTo={(v) => set(r.weekday, { breakEnd: v })}
+                        fromLabel={`Início do intervalo ${short}`}
+                        toLabel={`Fim do intervalo ${short}`}
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => set(r.weekday, { hasBreak: true })}
+                      className="inline-flex min-h-9 items-center gap-1 self-start text-[13px] font-bold text-primary-strong"
+                    >
+                      <Icon name="add" size={18} />
+                      Adicionar intervalo
+                    </button>
+                  )}
+
+                  {errors[r.weekday] ? (
+                    <p role="alert" className="m-0 text-[13px] font-medium text-danger">
+                      {errors[r.weekday]}
+                    </p>
+                  ) : null}
                 </div>
-              ) : null}
-              {errors[r.weekday] ? (
-                <p role="alert" className="m-0 pl-12 text-[13px] text-danger">
-                  {errors[r.weekday]}
-                </p>
-              ) : null}
-            </div>
-          ))}
-        {rows.every((r) => !r.open) ? <p className="m-0 p-4 text-sm text-muted">Selecione ao menos um dia.</p> : null}
-      </div>
+              ) : (
+                <span className="text-sm text-muted sm:flex sm:min-h-11 sm:items-center">Fechado</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {openCount === 0 ? (
+        <p role="alert" className="m-0 text-[13px] font-medium text-danger">
+          Abra ao menos um dia.
+        </p>
+      ) : null}
     </div>
   );
 }

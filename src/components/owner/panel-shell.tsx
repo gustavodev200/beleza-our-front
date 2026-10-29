@@ -22,8 +22,12 @@ const NAV = [
   { href: "/dashboard/schedule", label: "Agenda", short: "Agenda", icon: "calendar_month" },
   { href: "/dashboard/services", label: "Serviços", short: "Serviços", icon: "design_services" },
   { href: "/dashboard/professionals", label: "Profissionais", short: "Equipe", icon: "groups" },
+  { href: "/dashboard/hours", label: "Horários", short: "Horários", icon: "schedule" },
   { href: "/dashboard/profile", label: "Perfil público", short: "Perfil", icon: "storefront" },
 ];
+// Barra inferior do celular: 4 itens fixos + "Mais" com o restante.
+const MOBILE_MAIN = NAV.slice(0, 4);
+const MOBILE_MORE = NAV.slice(4);
 
 interface PanelActions {
   openNew: (preset?: { professionalId?: string; date?: string }) => void;
@@ -52,6 +56,14 @@ function Shell({ children }: { children: React.ReactNode }) {
   const overview = useOverview(active);
   const pending = overview.data?.newAndPending.length ?? 0;
   const [modal, setModal] = useState<{ kind: "new" | "block"; professionalId?: string; date?: string } | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMoreOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [moreOpen]);
 
   // Painel operacional só depois da aprovação (§5.3).
   useEffect(() => {
@@ -64,6 +76,12 @@ function Shell({ children }: { children: React.ReactNode }) {
   const b = business.data;
 
   const isActive = (n: (typeof NAV)[number]) => (n.exact ? pathname === n.href : pathname.startsWith(n.href));
+  const moreActive = MOBILE_MORE.some(isActive);
+  const tabClass = (on: boolean) =>
+    cn(
+      "relative flex min-h-11 flex-col items-center gap-0.5 py-1 text-[10px]",
+      on ? "font-bold text-ink" : "font-medium text-subtle",
+    );
 
   return (
     <PanelContext.Provider
@@ -162,22 +180,48 @@ function Shell({ children }: { children: React.ReactNode }) {
           <main className="min-w-0 flex-1 p-4 pb-24 sm:p-6 lg:pb-6">{children}</main>
         </div>
 
+        {moreOpen ? (
+          <button
+            type="button"
+            aria-label="Fechar menu"
+            onClick={() => setMoreOpen(false)}
+            className="fixed inset-0 z-30 bg-ink/30 lg:hidden"
+          />
+        ) : null}
+        {moreOpen ? (
+          <div
+            id="panel-more"
+            className="fixed right-2 bottom-[calc(68px+env(safe-area-inset-bottom))] left-2 z-40 flex flex-col gap-0.5 rounded-2xl border border-line bg-white p-2 shadow-[0_8px_28px_rgba(20,36,43,.18)] lg:hidden"
+          >
+            {MOBILE_MORE.map((n) => {
+              const on = isActive(n);
+              return (
+                <Link
+                  key={n.href}
+                  href={n.href}
+                  aria-current={on ? "page" : undefined}
+                  onClick={() => setMoreOpen(false)}
+                  className={cn(
+                    "flex min-h-12 items-center gap-3 rounded-xl px-3 text-[15px] font-semibold",
+                    on ? "bg-soft text-ink" : "text-ink-2 hover:bg-soft",
+                  )}
+                >
+                  <Icon name={n.icon} size={22} fill={on} />
+                  {n.label}
+                </Link>
+              );
+            })}
+          </div>
+        ) : null}
+
         <nav
           aria-label="Painel"
           className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-soft bg-white px-1 pt-2 pb-safe lg:hidden"
         >
-          {NAV.map((n) => {
-            const on = isActive(n);
+          {MOBILE_MAIN.map((n) => {
+            const on = isActive(n) && !moreOpen;
             return (
-              <Link
-                key={n.href}
-                href={n.href}
-                aria-current={on ? "page" : undefined}
-                className={cn(
-                  "relative flex min-h-11 flex-col items-center gap-0.5 py-1 text-[10px]",
-                  on ? "font-bold text-ink" : "font-medium text-subtle",
-                )}
-              >
+              <Link key={n.href} href={n.href} aria-current={on ? "page" : undefined} className={tabClass(on)}>
                 <Icon name={n.icon} size={24} fill={on} />
                 {n.short}
                 {n.exact && pending > 0 ? (
@@ -188,6 +232,16 @@ function Shell({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+          <button
+            type="button"
+            aria-expanded={moreOpen}
+            aria-controls="panel-more"
+            onClick={() => setMoreOpen((v) => !v)}
+            className={tabClass(moreActive || moreOpen)}
+          >
+            <Icon name={moreOpen ? "close" : "more_horiz"} size={24} />
+            Mais
+          </button>
         </nav>
       </div>
 

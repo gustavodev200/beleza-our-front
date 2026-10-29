@@ -4,7 +4,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
-import { HoursEditor, hoursToRows, rowsToPayload, type DayRow } from "@/components/owner/hours-editor";
 import { BusinessImagesEditor } from "@/components/owner/image-upload";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Chip, PageTitle, Toggle } from "@/components/ui/controls";
@@ -217,39 +216,6 @@ function DetailsForm({ b }: { b: OwnerBusiness }) {
   );
 }
 
-function HoursForm({ b }: { b: OwnerBusiness }) {
-  const qc = useQueryClient();
-  const [rows, setRows] = useState<DayRow[]>(() => hoursToRows(b.hours));
-  const [errors, setErrors] = useState<Record<number, string>>({});
-  const save = useMutation({
-    mutationFn: (days: unknown) => api<OwnerBusiness>("/owner/business/hours", { method: "PUT", body: { days } }),
-    onSuccess: (data) => {
-      qc.setQueryData(ownerKeys.business, data);
-      void qc.invalidateQueries({ queryKey: ownerKeys.agenda });
-      toast("Horários atualizados");
-    },
-    onError: (e) => toast.error(errorMessage(e)),
-  });
-  return (
-    <section className="flex flex-col gap-3.5 rounded-2xl border border-line bg-surface p-5">
-      <h2 className="m-0 text-lg font-bold">Horário de funcionamento</h2>
-      <HoursEditor rows={rows} onChange={setRows} errors={errors} />
-      <Button
-        className="self-start"
-        loading={save.isPending}
-        onClick={() => {
-          const { days, errors: errs, valid } = rowsToPayload(rows);
-          setErrors(errs);
-          if (!days.length) toast.error("Selecione ao menos um dia.");
-          if (valid) save.mutate(days);
-        }}
-      >
-        Salvar horários
-      </Button>
-    </section>
-  );
-}
-
 export default function PublicProfilePage() {
   const q = useOwnerBusiness();
   if (q.isPending) return <Spinner />;
@@ -263,8 +229,6 @@ export default function PublicProfilePage() {
       <BusinessImagesEditor business={b} />
       <LinkCard b={b} />
       <DetailsForm key={b.id} b={b} />
-      {/* key: horários salvos em outro lugar recriam o formulário com os dados novos */}
-      <HoursForm key={JSON.stringify(b.hours)} b={b} />
     </div>
   );
 }

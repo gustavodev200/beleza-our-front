@@ -16,6 +16,7 @@ const WEEKDAYS_LONG = [
   "Sábado",
 ];
 export const WEEKDAY_SHORT = WEEKDAYS_SHORT;
+export const WEEKDAY_LONG = WEEKDAYS_LONG;
 
 const MONTHS = [
   "janeiro",
