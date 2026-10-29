@@ -59,7 +59,7 @@ export default async function HomePage() {
             Salões, barbearias e profissionais em Goiânia
           </div>
           <h1 className="m-0 text-[clamp(40px,5vw,62px)] leading-[1.05] font-bold">
-            Beleza e bem-estar, <em className="text-accent">mais perto</em> de você
+            Beleza e bem-estar, <em className="text-accent">mais</em> <em className="text-primary">perto</em> de você
           </h1>
           <p className="m-0 max-w-[480px] text-[17px] leading-relaxed text-[#5d6a71]">
             Compare serviços, preços e avaliações e marque seu horário em poucos cliques — sem trocar mensagens com
@@ -82,27 +82,33 @@ export default async function HomePage() {
         <div className="relative grid h-[480px] min-w-0 grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-3.5">
           <div className="h-[440px] rounded-[28px] bg-[repeating-linear-gradient(135deg,oklch(0.9_0.035_20)_0_12px,oklch(0.875_0.042_20)_12px_24px)]" />
           <div className="mt-20 h-[400px] rounded-[28px] bg-[repeating-linear-gradient(135deg,oklch(0.9_0.035_210)_0_12px,oklch(0.875_0.042_210)_12px_24px)]" />
-          {heroNext ? (
-            <Link
-              href={bookingHref(heroNext.slug, {
-                serviceId: heroNext.nextSlots[0].serviceId,
-                startsAt: heroNext.nextSlots[0].startsAt,
-              })}
-              className="absolute bottom-2 left-3 flex max-w-[calc(100%-24px)] items-center gap-3 rounded-[18px] bg-white px-3.5 py-3 shadow-float"
-            >
-              <span className="grid size-10 place-items-center rounded-xl bg-primary-soft">
-                <Icon name="event_available" size={22} className="text-primary-strong" />
+          {/* Sem horário real na API, o card continua visível e leva para /explorar. */}
+          <Link
+            href={
+              heroNext
+                ? bookingHref(heroNext.slug, {
+                    serviceId: heroNext.nextSlots[0].serviceId,
+                    startsAt: heroNext.nextSlots[0].startsAt,
+                  })
+                : "/explorar"
+            }
+            className="absolute bottom-2 left-3 flex max-w-[calc(100%-24px)] items-center gap-3 rounded-[18px] bg-white px-3.5 py-3 shadow-float"
+          >
+            <span className="grid size-10 place-items-center rounded-xl bg-primary-soft">
+              <Icon name="event_available" size={22} className="text-primary-strong" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-[11px] text-muted">
+                Próximo horário · {heroNext ? heroNext.name : "Goiânia"}
               </span>
-              <span className="min-w-0">
-                <span className="block truncate text-[11px] text-muted">Próximo horário · {heroNext.name}</span>
-                <span className="block text-sm font-bold">
-                  {formatRelativeDay(localDate(heroNext.nextSlots[0].startsAt))},{" "}
-                  {formatTime(heroNext.nextSlots[0].startsAt)}
-                </span>
+              <span className="block text-sm font-bold">
+                {heroNext
+                  ? `${formatRelativeDay(localDate(heroNext.nextSlots[0].startsAt))}, ${formatTime(heroNext.nextSlots[0].startsAt)}`
+                  : "Veja os horários de hoje"}
               </span>
-              <span className="ml-1.5 rounded-[9px] bg-ink px-3 py-2 text-xs font-bold text-white">Agendar</span>
-            </Link>
-          ) : null}
+            </span>
+            <span className="ml-1.5 rounded-[9px] bg-ink px-3 py-2 text-xs font-bold text-white">Agendar</span>
+          </Link>
         </div>
       </section>
 
