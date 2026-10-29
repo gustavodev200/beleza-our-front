@@ -1,8 +1,9 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useMemo, useState, useSyncExternalStore } from "react";
+import { Suspense, useCallback, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { AppointmentDrawer } from "@/components/owner/appointment-drawer";
 import { usePanel } from "@/components/owner/panel-shell";
@@ -10,27 +11,19 @@ import { Button } from "@/components/ui/button";
 import { PageTitle, Segmented, Toggle } from "@/components/ui/controls";
 import { Icon } from "@/components/ui/icon";
 import { ErrorState, Skeleton } from "@/components/ui/states";
-import { layoutLanes } from "@/lib/agenda-layout";
 import { api, errorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { personColors } from "@/lib/colors";
-import {
-  addDays,
-  dayOfMonth,
-  firstName,
-  formatShortDate,
-  formatTime,
-  hhmmToMinutes,
-  localDate,
-  weekdayOf,
-  weekdayShort,
-} from "@/lib/format";
-import { BLOCK_REASONS } from "@/lib/labels";
+import { addDays, dayOfMonth, firstName, formatShortDate, localDate, weekdayOf, weekdayShort } from "@/lib/format";
 import { ownerKeys } from "@/lib/owner-queries";
 import { uuidSchema } from "@/lib/schemas";
-import type { Agenda, OwnerAppointment, TimeBlock } from "@/lib/types";
+import type { Agenda } from "@/lib/types";
 
-const HOUR_PX = 56;
+// O calendário depende de Intl/fuso do navegador: só renderiza no cliente.
+const AgendaCalendar = dynamic(() => import("@/components/owner/agenda-calendar"), {
+  ssr: false,
+  loading: () => <Skeleton className="m-4 h-[480px]" />,
+});
 
 const NARROW = "(max-width: 767px)";
 function subscribeNarrow(cb: () => void) {
@@ -51,16 +44,39 @@ function mondayOf(date: string): string {
   return addDays(date, wd === 0 ? -6 : 1 - wd);
 }
 
-function minutesIn(instant: string, day: string, edge: "start" | "end"): number {
-  const d = localDate(instant);
-  if (d < day) return 0;
-  if (d > day) return edge === "end" ? 1440 : 0;
-  return hhmmToMinutes(formatTime(instant));
+/** Faixa da semana para trocar de dia com um toque (celular, visão de dia). */
+function DayStrip({ anchor, today, onPick }: { anchor: string; today: string; onPick: (day: string) => void }) {
+  const monday = mondayOf(anchor);
+  return (
+    <div role="tablist" aria-label="Dias da semana" className="grid grid-cols-7 gap-1.5">
+      {Array.from({ length: 7 }, (_, i) => addDays(monday, i)).map((d) => {
+        const on = d === anchor;
+        return (
+          <button
+            key={d}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            onClick={() => onPick(d)}
+            className={cn(
+              "flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl border text-center transition-colors",
+              on ? "border-ink bg-ink text-white shadow-card" : "border-line bg-surface text-ink hover:border-line-strong",
+            )}
+          >
+            <span className={cn("text-[10px] font-bold tracking-wide uppercase", on ? "text-white/70" : "text-muted")}>
+              {weekdayShort(d)}
+            </span>
+            <span className="text-base leading-none font-extrabold">{dayOfMonth(d)}</span>
+            <span
+              aria-hidden
+              className={cn("size-1 rounded-full", d === today ? (on ? "bg-accent-soft" : "bg-accent") : "bg-transparent")}
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
 }
-
-type Entry =
-  | { kind: "appt"; id: string; start: number; end: number; appt: OwnerAppointment }
-  | { kind: "block"; id: string; start: number; end: number; block: TimeBlock };
 
 function AgendaView() {
   const params = useSearchParams();
@@ -70,15 +86,15 @@ function AgendaView() {
   const qc = useQueryClient();
   const narrow = useNarrowScreen();
   const [chosenView, setView] = useState<"week" | "day" | null>(null);
-  // Sem escolha explícita: telas estreitas começam na visão de dia.
-  const view = chosenView ?? (narrow ? "day" : "week");
+  // Celular: só a visão de dia (a faixa de dias faz o papel da semana).
+  const view = narrow ? "day" : (chosenView ?? "week");
   const [anchor, setAnchor] = useState(today);
   const [hiddenState, setHidden] = useState<Set<string> | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const swipe = useRef<{ x: number; y: number } | null>(null);
 
   const from = view === "week" ? mondayOf(anchor) : anchor;
   const to = view === "week" ? addDays(from, 6) : anchor;
-  const days = Array.from({ length: view === "week" ? 7 : 1 }, (_, i) => addDays(from, i));
 
   const q = useQuery({
     queryKey: [...ownerKeys.agenda, from, to],
@@ -102,51 +118,7 @@ function AgendaView() {
 
   const data = q.data;
   const pros = data?.professionals ?? [];
-  const proName = (id: string) => pros.find((p) => p.id === id)?.name ?? "";
-
-  const range = useMemo(() => {
-    const open = data?.hours ?? [];
-    if (!open.length) return { start: 8 * 60, end: 20 * 60 };
-    const start = Math.floor(Math.min(...open.map((h) => h.opensAt)) / 60) * 60;
-    const end = Math.ceil(Math.max(...open.map((h) => h.closesAt)) / 60) * 60;
-    return { start, end: Math.max(end, start + 60) };
-  }, [data?.hours]);
-  const hours = Array.from({ length: (range.end - range.start) / 60 }, (_, i) => range.start / 60 + i);
-  const height = (range.end - range.start) * (HOUR_PX / 60);
-  const y = (minutes: number) => (Math.max(range.start, Math.min(range.end, minutes)) - range.start) * (HOUR_PX / 60);
-
-  const columns = days.map((day) => {
-    const h = data?.hours.find((x) => x.weekday === weekdayOf(day));
-    const entries: Entry[] = [];
-    for (const a of data?.appointments ?? []) {
-      if (hidden.has(a.professional.id) || a.status === "CANCELED") continue;
-      if (localDate(a.startsAt) !== day) continue;
-      entries.push({
-        kind: "appt",
-        id: a.id,
-        start: minutesIn(a.startsAt, day, "start"),
-        end: minutesIn(a.endsAt, day, "end"),
-        appt: a,
-      });
-    }
-    for (const b of data?.blocks ?? []) {
-      if (hidden.has(b.professionalId)) continue;
-      if (
-        localDate(b.startsAt) > day ||
-        localDate(b.endsAt) < day ||
-        (localDate(b.endsAt) === day && formatTime(b.endsAt) === "00:00")
-      )
-        continue;
-      entries.push({
-        kind: "block",
-        id: b.id,
-        start: minutesIn(b.startsAt, day, "start"),
-        end: minutesIn(b.endsAt, day, "end"),
-        block: b,
-      });
-    }
-    return { day, hours: h, placed: layoutLanes(entries) };
-  });
+  const proName = useCallback((id: string) => data?.professionals.find((p) => p.id === id)?.name ?? "", [data]);
 
   const shift = (dir: 1 | -1) => setAnchor(addDays(anchor, dir * (view === "week" ? 7 : 1)));
   const rangeLabel =
@@ -170,14 +142,16 @@ function AgendaView() {
               Hoje
             </Button>
             <b className="px-1 text-sm">{rangeLabel}</b>
-            <Segmented
-              value={view}
-              onChange={setView}
-              options={[
-                { value: "week", label: "Semana" },
-                { value: "day", label: "Dia" },
-              ]}
-            />
+            {narrow ? null : (
+              <Segmented
+                value={view}
+                onChange={setView}
+                options={[
+                  { value: "week", label: "Semana" },
+                  { value: "day", label: "Dia" },
+                ]}
+              />
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -256,158 +230,41 @@ function AgendaView() {
           </div>
         </div>
 
-        <div className="w-full min-w-0 flex-1 overflow-auto rounded-2xl border border-line bg-surface">
-          {q.isPending ? (
-            <Skeleton className="m-4 h-[480px]" />
-          ) : q.isError ? (
-            <ErrorState className="m-4" message={errorMessage(q.error)} onRetry={() => q.refetch()} />
-          ) : (
-            <div style={{ minWidth: view === "week" ? 760 : undefined }}>
-              <div
-                className="sticky top-0 z-[2] grid border-b border-soft bg-white"
-                style={{ gridTemplateColumns: `52px repeat(${days.length}, minmax(0,1fr))` }}
-              >
-                <div />
-                {days.map((d) => (
-                  <div key={d} className="flex flex-col items-center gap-0.5 py-2.5">
-                    <span className={cn("text-xs font-semibold", d === today ? "text-primary-strong" : "text-muted")}>
-                      {weekdayShort(d)}
-                    </span>
-                    <span
-                      className={cn(
-                        "grid size-[30px] place-items-center rounded-full text-sm font-extrabold",
-                        d === today && "bg-primary text-white",
-                      )}
-                    >
-                      {dayOfMonth(d)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className="grid" style={{ gridTemplateColumns: `52px repeat(${days.length}, minmax(0,1fr))` }}>
-                <div>
-                  {hours.map((h) => (
-                    <div key={h} style={{ height: HOUR_PX }} className="pt-0.5 pr-2 text-right text-[11px] text-subtle">
-                      {String(h).padStart(2, "0")}:00
-                    </div>
-                  ))}
-                </div>
-                {columns.map((col) => (
-                  <div
-                    key={col.day}
-                    className={cn("relative border-l border-soft", !col.hours && "hatch-closed")}
-                    style={{ height }}
-                  >
-                    <div
-                      className="pointer-events-none absolute inset-0"
-                      style={{
-                        background: `repeating-linear-gradient(to bottom,#eff1f1 0 1px,transparent 1px ${HOUR_PX}px)`,
-                      }}
-                    />
-                    {!col.hours ? (
-                      <div className="absolute inset-x-0 top-3 text-center text-xs font-bold text-subtle">Fechado</div>
-                    ) : null}
-                    {col.hours ? (
-                      <>
-                        {col.hours.opensAt > range.start ? (
-                          <div
-                            className="absolute inset-x-0 top-0 hatch-closed"
-                            style={{ height: y(col.hours.opensAt) }}
-                          />
-                        ) : null}
-                        {col.hours.closesAt < range.end ? (
-                          <div
-                            className="absolute inset-x-0 bottom-0 hatch-closed"
-                            style={{ top: y(col.hours.closesAt) }}
-                          />
-                        ) : null}
-                        {col.hours.breakStart !== null && col.hours.breakEnd !== null ? (
-                          <div
-                            className="absolute inset-x-[3px] rounded-[7px] px-1.5 py-1 text-[11px] text-muted hatch"
-                            style={{
-                              top: y(col.hours.breakStart),
-                              height: y(col.hours.breakEnd) - y(col.hours.breakStart),
-                            }}
-                          >
-                            Pausa
-                          </div>
-                        ) : null}
-                      </>
-                    ) : null}
-                    {col.placed.map(({ item, lane, lanes }) => {
-                      const top = y(item.start) + 1;
-                      const h = Math.max(y(item.end) - y(item.start) - 3, 22);
-                      const style = {
-                        top,
-                        height: h,
-                        left: `calc(${(lane / lanes) * 100}% + 3px)`,
-                        width: `calc(${100 / lanes}% - 6px)`,
-                      };
-                      if (item.kind === "block") {
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            style={style}
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  "Remover este bloqueio? O horário volta a ficar disponível para as clientes.",
-                                )
-                              )
-                                removeBlock.mutate(item.id);
-                            }}
-                            className="absolute z-[1] overflow-hidden rounded-[7px] border border-line-strong px-1.5 py-1 text-left text-[11px] text-ink-2 hatch"
-                            title="Clique para remover o bloqueio"
-                          >
-                            <b className="block truncate">
-                              Bloqueado · {firstName(proName(item.block.professionalId))}
-                            </b>
-                            <span className="block truncate">
-                              {BLOCK_REASONS.find((r) => r.id === item.block.reason)?.label}
-                            </span>
-                          </button>
-                        );
-                      }
-                      const a = item.appt;
-                      const c = personColors(a.professional.name);
-                      const faded = a.status === "NO_SHOW" || a.status === "COMPLETED";
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          style={{
-                            ...style,
-                            background: a.status === "PENDING" ? "#fff" : c.soft,
-                            color: c.text,
-                            borderWidth: 1,
-                            borderStyle: a.status === "PENDING" ? "dashed" : "solid",
-                            borderColor: a.status === "PENDING" ? c.strong : "transparent",
-                            borderLeftWidth: 3,
-                            borderLeftStyle: "solid",
-                            borderLeftColor: c.strong,
-                            opacity: faded ? 0.55 : 1,
-                            boxShadow: selected === a.id ? "0 0 0 2px #14242b" : undefined,
-                          }}
-                          onClick={() => setSelected(a.id)}
-                          className="absolute z-[1] flex flex-col gap-px overflow-hidden rounded-[7px] px-1.5 py-1 text-left hover:brightness-[.97]"
-                          aria-label={`${formatTime(a.startsAt)} ${a.serviceName} com ${a.client.name}`}
-                        >
-                          <span className="w-full truncate text-[11px] font-bold">
-                            {a.isNewForOwner && a.origin === "APP" ? "● " : ""}
-                            {a.serviceName}
-                          </span>
-                          <span className="w-full truncate text-[10px]">
-                            {formatTime(a.startsAt)} · {firstName(a.client.name)}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+        <div className="flex w-full min-w-0 flex-1 flex-col gap-3">
+          {narrow && view === "day" ? <DayStrip anchor={anchor} today={today} onPick={setAnchor} /> : null}
+          <div
+            onTouchStart={(e) => {
+              swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }}
+            onTouchEnd={(e) => {
+              const start = swipe.current;
+              swipe.current = null;
+              if (!start || view !== "day") return;
+              const dx = e.changedTouches[0].clientX - start.x;
+              const dy = e.changedTouches[0].clientY - start.y;
+              // Só um arrasto claramente horizontal troca o dia.
+              if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 2) shift(dx < 0 ? 1 : -1);
+            }}
+            className="h-[70dvh] min-h-[460px] w-full overflow-hidden rounded-2xl border border-line bg-surface lg:h-[calc(100dvh-15rem)] lg:min-h-[560px]"
+          >
+            {q.isError ? (
+              <ErrorState className="m-4" message={errorMessage(q.error)} onRetry={() => q.refetch()} />
+            ) : (
+              <AgendaCalendar
+                data={data}
+                hidden={hidden}
+                view={view}
+                anchor={anchor}
+                selected={selected}
+                proName={proName}
+                onSelect={setSelected}
+                onBlockClick={(id) => {
+                  if (window.confirm("Remover este bloqueio? O horário volta a ficar disponível para as clientes."))
+                    removeBlock.mutate(id);
+                }}
+              />
+            )}
+          </div>
         </div>
       </div>
       <AppointmentDrawer id={selected} onClose={() => setSelected(null)} />
