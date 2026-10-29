@@ -1,0 +1,250 @@
+/*
+ * Agenda do dono (FullCalendar v7, tema Monarch) com a paleta do belezaOur.
+ * Tudo escopado em .bo-agenda; o tema vem sem camada, então os seletores aqui
+ * usam duas classes para ganhar dele.
+ */
+
+.bo-agenda {
+  --fc-monarch-primary: var(--color-primary);
+  --fc-monarch-primary-foreground: #fff;
+  --fc-monarch-primary-over: var(--color-primary-strong);
+  --fc-monarch-primary-down: var(--color-primary-strong);
+  --fc-monarch-secondary: var(--color-primary-soft);
+  --fc-monarch-secondary-foreground: var(--color-primary-strong);
+  --fc-monarch-secondary-over: var(--color-primary-tint);
+  --fc-monarch-secondary-down: var(--color-primary-tint);
+  --fc-monarch-tertiary: var(--color-accent);
+  --fc-monarch-tertiary-foreground: #fff;
+  --fc-monarch-tertiary-over: var(--color-accent);
+  --fc-monarch-tertiary-down: var(--color-accent);
+  --fc-monarch-event: var(--color-primary);
+  --fc-monarch-event-contrast: #fff;
+  --fc-monarch-highlight: color-mix(in oklab, var(--color-primary) 8%, transparent);
+  --fc-monarch-now: var(--color-accent);
+  --fc-monarch-selected: var(--color-ink);
+  --fc-monarch-selected-foreground: #fff;
+  --fc-monarch-selected-over: var(--color-ink-2);
+  --fc-monarch-selected-down: var(--color-ink-2);
+  --fc-monarch-outline: var(--color-primary);
+  --fc-monarch-popover: var(--color-surface);
+  --fc-monarch-popover-foreground: var(--color-ink);
+  --fc-monarch-background: var(--color-surface);
+  --fc-monarch-faint: var(--color-line-soft);
+  --fc-monarch-muted: var(--color-soft);
+  --fc-monarch-strong: var(--color-line-strong);
+  --fc-monarch-stronger: var(--color-line-strong);
+  --fc-monarch-strongest: var(--color-line-strong);
+  --fc-monarch-foreground: var(--color-ink);
+  --fc-monarch-faint-foreground: var(--color-subtle);
+  --fc-monarch-muted-foreground: var(--color-muted);
+  --fc-monarch-border: var(--color-line);
+  --fc-monarch-strong-border: var(--color-line-strong);
+
+  font-family: inherit;
+  font-size: 14px;
+}
+
+/* ---------- Cabeçalho dos dias ---------- */
+
+.bo-agenda .bo-dh {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-block: 10px 8px;
+}
+
+.bo-agenda .bo-dh-wd {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.bo-agenda .bo-dh-num {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-ink);
+  transition: background 0.15s;
+}
+
+.bo-agenda .bo-dh-today .bo-dh-wd {
+  color: var(--color-primary-strong);
+}
+
+.bo-agenda .bo-dh-today .bo-dh-num {
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 4px 12px color-mix(in oklab, var(--color-primary) 40%, transparent);
+}
+
+/* ---------- Horas (coluna da esquerda) ---------- */
+
+.bo-agenda .bo-hour {
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-subtle);
+}
+
+/* ---------- Faixas ---------- */
+
+.bo-agenda .bo-today-lane {
+  background: color-mix(in oklab, var(--color-primary) 4%, transparent);
+}
+
+.bo-agenda .bo-closed {
+  background: repeating-linear-gradient(135deg, #f7f7f5 0 8px, #eff1f1 8px 16px);
+}
+
+.bo-agenda .bo-break {
+  background: repeating-linear-gradient(135deg, #f2f4f4 0 6px, #e8ebec 6px 12px);
+  border-radius: 8px;
+  margin-inline: 3px;
+}
+
+.bo-agenda .bo-break-label {
+  display: inline-block;
+  margin: 4px 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.85);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+
+/* ---------- Agora ---------- */
+
+.bo-agenda .bo-now-line {
+  border-top: 2px solid var(--color-accent);
+}
+
+.bo-agenda .bo-now-dot {
+  background: var(--color-accent);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-accent) 22%, transparent);
+}
+
+/* ---------- Eventos ---------- */
+
+.bo-agenda .bo-ev {
+  --bo-ev-ink: color-mix(in oklab, var(--fc-event-color) 42%, #000);
+  background: color-mix(in oklab, var(--fc-event-color) 14%, #fff);
+  color: var(--bo-ev-ink);
+  border: 1px solid color-mix(in oklab, var(--fc-event-color) 18%, transparent);
+  border-left: 4px solid var(--fc-event-color);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgb(20 36 43 / 0.06);
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    opacity 0.12s;
+}
+
+.bo-agenda .bo-ev-inner {
+  color: var(--bo-ev-ink);
+}
+
+.bo-agenda .bo-ev:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgb(20 36 43 / 0.16);
+  z-index: 5;
+}
+
+.bo-agenda .bo-ev:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 1px;
+}
+
+.bo-agenda .bo-ev-pending {
+  background: #fff;
+  border: 1.5px dashed var(--fc-event-color);
+  border-left: 4px solid var(--fc-event-color);
+}
+
+.bo-agenda .bo-ev-faded {
+  opacity: 0.55;
+}
+
+.bo-agenda .bo-ev-selected {
+  box-shadow:
+    0 0 0 2px var(--color-ink),
+    0 8px 18px rgb(20 36 43 / 0.16);
+  z-index: 6;
+}
+
+.bo-agenda .bo-ev-block {
+  --bo-ev-ink: var(--color-ink-2);
+  background: repeating-linear-gradient(135deg, #f2f4f4 0 6px, #e8ebec 6px 12px);
+  color: var(--color-ink-2);
+  border: 1px solid var(--color-line-strong);
+  border-left: 4px solid var(--color-subtle);
+}
+
+.bo-agenda .bo-ev-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  height: 100%;
+  min-width: 0;
+  padding: 4px 7px;
+  text-align: left;
+}
+
+.bo-agenda .bo-ev-body.bo-ev-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.bo-agenda .bo-ev-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.bo-agenda .bo-ev-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1.25;
+  opacity: 0.85;
+}
+
+.bo-agenda .bo-ev-new {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 4px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  vertical-align: middle;
+}
+
+/* ---------- Celular ---------- */
+
+@media (max-width: 767px) {
+  .bo-agenda .bo-ev-body {
+    padding: 3px 6px;
+  }
+
+  .bo-agenda .bo-ev-title {
+    font-size: 13px;
+  }
+
+  .bo-agenda .bo-ev-sub {
+    font-size: 12px;
+  }
+}
