@@ -18,7 +18,7 @@ import { Notice, Spinner } from "@/components/ui/states";
 import { ApiError, api, errorMessage } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/cn";
-import { formatDuration, formatMoney, formatPhone, maskPhoneInput, parseMoneyToCents } from "@/lib/format";
+import { formatDuration, formatMoney, formatPhone, maskCpfCnpjInput, maskPhoneInput, parseMoneyToCents } from "@/lib/format";
 import { BUSINESS_TYPES, SERVICE_SUGGESTIONS } from "@/lib/labels";
 import {
   ownerKeys,
@@ -69,7 +69,10 @@ function StepTitle({ title, sub }: { title: string; sub?: string }) {
 function AccountStep() {
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const form = useForm<z.infer<typeof ownerSignUpSchema>>({ resolver: zodResolver(ownerSignUpSchema) });
+  const form = useForm<z.input<typeof ownerSignUpSchema>, unknown, z.output<typeof ownerSignUpSchema>>({
+    resolver: zodResolver(ownerSignUpSchema),
+    defaultValues: { name: "", email: "", cpfCnpj: "", password: "", acceptedTerms: false },
+  });
 
   const onSubmit = form.handleSubmit(async (v) => {
     setError(null);
@@ -77,6 +80,9 @@ function AccountStep() {
       name: v.name,
       email: v.email,
       password: v.password,
+      cpfCnpj: v.cpfCnpj,
+      // Não é campo do usuário: o hook da API exige e transforma em termsAcceptedAt/termsVersion.
+      ...({ acceptedTerms: v.acceptedTerms } as object),
       callbackURL: `${window.location.origin}/dashboard/sign-up`,
     });
     if (err) {
@@ -115,15 +121,58 @@ function AccountStep() {
         sub="É com ela que você entra no painel. Depois cadastramos o seu estabelecimento."
       />
       {error ? <Notice tone="danger">{error}</Notice> : null}
-      <Field label="Seu nome" error={form.formState.errors.name?.message}>
+      <Field label="Nome completo" error={form.formState.errors.name?.message}>
         {(p) => <Input {...p} autoComplete="name" {...form.register("name")} />}
       </Field>
       <Field label="E-mail" error={form.formState.errors.email?.message}>
         {(p) => <Input {...p} type="email" autoComplete="email" {...form.register("email")} />}
       </Field>
+      <Field
+        label="CPF ou CNPJ"
+        error={form.formState.errors.cpfCnpj?.message}
+        hint="Necessário para receber pagamentos pelo Asaas"
+      >
+        {(p) => (
+          <Input
+            {...p}
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder="000.000.000-00"
+            {...form.register("cpfCnpj", {
+              onChange: (e) => form.setValue("cpfCnpj", maskCpfCnpjInput(e.target.value)),
+            })}
+          />
+        )}
+      </Field>
       <Field label="Senha" error={form.formState.errors.password?.message} hint="Mínimo de 8 caracteres">
         {(p) => <Input {...p} type="password" autoComplete="new-password" {...form.register("password")} />}
       </Field>
+      <div className="flex flex-col gap-1.5">
+        <label className="flex min-h-11 cursor-pointer items-start gap-2.5 text-[13px] leading-snug text-ink-2">
+          <input
+            type="checkbox"
+            aria-invalid={Boolean(form.formState.errors.acceptedTerms)}
+            className="mt-0.5 size-5 shrink-0 accent-[oklch(0.5_0.09_210)]"
+            {...form.register("acceptedTerms")}
+          />
+          <span>
+            Li e concordo com os{" "}
+            <Link href="/termos" target="_blank" className="font-bold text-ink underline">
+              Termos de Uso
+            </Link>{" "}
+            e a{" "}
+            <Link href="/privacidade" target="_blank" className="font-bold text-ink underline">
+              Política de Privacidade
+            </Link>
+            .
+          </span>
+        </label>
+        {form.formState.errors.acceptedTerms ? (
+          <p role="alert" className="text-[13px] font-medium text-danger">
+            {form.formState.errors.acceptedTerms.message}
+          </p>
+        ) : null}
+      </div>
       <Button type="submit" size="lg" loading={form.formState.isSubmitting}>
         Criar conta
       </Button>

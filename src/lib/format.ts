@@ -171,6 +171,46 @@ export function maskPhoneInput(raw: string): string {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
+/** Máscara progressiva de CPF ("000.000.000-00") que vira CNPJ ("00.000.000/0000-00") após 11 dígitos. */
+export function maskCpfCnpjInput(raw: string): string {
+  const d = raw.replace(/\D/g, "").slice(0, 14);
+  if (d.length <= 11) {
+    return d
+      .replace(/^(\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
+  }
+  return d
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/^(\d{2})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3/$4")
+    .replace(/^(\d{2})\.(\d{3})\.(\d{3})\/(\d{4})(\d)/, "$1.$2.$3/$4-$5");
+}
+
+/** Dígitos de um CPF/CNPJ válido (dígitos verificadores conferidos) ou `null`. */
+export function normalizeCpfCnpj(raw: string): string | null {
+  const d = raw.replace(/\D/g, "");
+  if (/^(\d)\1+$/.test(d)) return null;
+  const n = d.split("").map(Number);
+  const check = (nums: number[], weights: number[]) => {
+    const rest = nums.reduce((acc, v, i) => acc + v * weights[i], 0) % 11;
+    return rest < 2 ? 0 : 11 - rest;
+  };
+  if (d.length === 11) {
+    const ok =
+      check(n.slice(0, 9), [10, 9, 8, 7, 6, 5, 4, 3, 2]) === n[9] &&
+      check(n.slice(0, 10), [11, 10, 9, 8, 7, 6, 5, 4, 3, 2]) === n[10];
+    return ok ? d : null;
+  }
+  if (d.length === 14) {
+    const ok =
+      check(n.slice(0, 12), [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]) === n[12] &&
+      check(n.slice(0, 13), [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]) === n[13];
+    return ok ? d : null;
+  }
+  return null;
+}
+
 /** E.164 → "(62) 99999-0000"; devolve o valor original se não reconhecer. */
 export function formatPhone(value: string | null | undefined): string {
   if (!value) return "";

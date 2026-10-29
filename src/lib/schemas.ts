@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { normalizeBrPhone } from "./format";
+import { normalizeBrPhone, normalizeCpfCnpj } from "./format";
 
 /**
  * Validação na borda (Princípio II) com as mesmas regras da API, para o
@@ -32,10 +32,25 @@ export const ownerSignInSchema = z.object({
   password: z.string().min(1, "Informe a senha"),
 });
 
+export const cpfCnpjSchema = z
+  .string()
+  .trim()
+  .min(1, "Informe o CPF ou CNPJ")
+  .transform((value, ctx) => {
+    const digits = normalizeCpfCnpj(value);
+    if (!digits) {
+      ctx.addIssue({ code: "custom", message: "CPF ou CNPJ inválido" });
+      return z.NEVER;
+    }
+    return digits;
+  });
+
 export const ownerSignUpSchema = z.object({
-  name: nameSchema,
+  name: z.string().trim().min(2, "Informe seu nome completo").max(80, "Nome muito longo"),
   email: emailSchema,
+  cpfCnpj: cpfCnpjSchema,
   password: passwordSchema,
+  acceptedTerms: z.boolean().refine((v) => v, "Aceite os Termos de Uso e a Política de Privacidade"),
 });
 
 export const resetPasswordSchema = z
