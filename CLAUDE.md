@@ -22,6 +22,20 @@ Pontos críticos para o frontend:
   públicas pré-renderizadas para SEO, LCP < 2,5s (§11).
 - Estados de carregamento, vazio e erro em toda lista; toast em toda ação.
 
+### Padrão: rotas e pastas em inglês, interface em pt-BR
+
+O público é brasileiro, mas **todo identificador técnico é em inglês**:
+
+- **Rotas/URLs**: segmentos em inglês, kebab-case (`/explore`, `/appointments/[id]/reschedule`,
+  `/dashboard/sign-in`, `/admin/approvals`, `/welcome`). Nunca `/explorar`, `/painel`, `/entrar`.
+- **Query params e seus valores**: inglês (`?category=`, `?neighborhood=`, `?sort=`, `?page=`,
+  `?reason=blocked`, `?service=`, `?professional=`, `?start=`, `?next=`).
+- **Pastas e arquivos**: inglês (`src/app/(client)/my-schedule`, `components/client/city-onboarding.tsx`).
+- **Em pt-BR**: só o que o usuário lê — textos de tela, `metadata` (title/description), toasts,
+  mensagens de erro, e-mails/WhatsApp. Comentários de código seguem em pt-BR.
+- Nova rota estática na raiz do app do cliente → adicionar o segmento em `RESERVED_SLUGS`
+  (`../beleza-our-back/src/businesses/businesses.service.ts`), pois o perfil público vive em `/{slug}`.
+
 Como este é um projeto concreto, o princípio 5 abaixo ("sem funcionalidade de
 negócio") vale só para mudanças no template em si, não para o código do
 belezaOur.

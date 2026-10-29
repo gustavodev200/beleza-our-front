@@ -40,7 +40,7 @@ export function useFavoriteToggle(businessId: string) {
 
   const toggle = () => {
     if (!me) {
-      router.push(`/entrar?next=${encodeURIComponent(pathname)}`);
+      router.push(`/sign-in?next=${encodeURIComponent(pathname)}`);
       return;
     }
     if (!isClient) {

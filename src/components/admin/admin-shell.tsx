@@ -13,12 +13,12 @@ import type { AdminBusinessRow, Page } from "@/lib/types";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: "space_dashboard", exact: true },
-  { href: "/admin/aprovacoes", label: "Aprovações", icon: "verified_user" },
-  { href: "/admin/estabelecimentos", label: "Estabelecimentos", icon: "storefront" },
-  { href: "/admin/usuarios", label: "Usuários", icon: "group" },
-  { href: "/admin/categorias", label: "Categorias", icon: "category" },
-  { href: "/admin/planos", label: "Planos", icon: "workspace_premium" },
-  { href: "/admin/configuracoes", label: "Configurações", icon: "settings" },
+  { href: "/admin/approvals", label: "Aprovações", icon: "verified_user" },
+  { href: "/admin/businesses", label: "Estabelecimentos", icon: "storefront" },
+  { href: "/admin/users", label: "Usuários", icon: "group" },
+  { href: "/admin/categories", label: "Categorias", icon: "category" },
+  { href: "/admin/plans", label: "Planos", icon: "workspace_premium" },
+  { href: "/admin/settings", label: "Configurações", icon: "settings" },
 ];
 
 export const pendingKey = ["admin", "businesses", "PENDING"] as const; // prefixo de adminKeys.businesses
@@ -43,7 +43,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 
   // Sem 2FA ativo a API recusa tudo (MFA_ENROLLMENT_REQUIRED): leva ao cadastro.
   useEffect(() => {
-    if (me && !mfaOk) router.replace("/admin/entrar?motivo=2fa");
+    if (me && !mfaOk) router.replace("/admin/sign-in?reason=2fa");
   }, [me, mfaOk, router]);
   if (!mfaOk) return <Spinner className="min-h-dvh" />;
 
@@ -73,7 +73,7 @@ function Shell({ children }: { children: React.ReactNode }) {
               >
                 <Icon name={n.icon} size={20} />
                 <span className="flex-1">{n.label}</span>
-                {n.href === "/admin/aprovacoes" && badge > 0 ? (
+                {n.href === "/admin/approvals" && badge > 0 ? (
                   <span className="rounded-full bg-star px-[7px] py-px text-[11px] font-extrabold text-ink">
                     {badge}
                   </span>
@@ -92,7 +92,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           </div>
           <button
             type="button"
-            onClick={() => signOut("/admin/entrar")}
+            onClick={() => signOut("/admin/sign-in")}
             aria-label="Sair"
             className="grid size-9 place-items-center"
           >
@@ -110,7 +110,7 @@ function Shell({ children }: { children: React.ReactNode }) {
             <div className="flex-1" />
             <button
               type="button"
-              onClick={() => signOut("/admin/entrar")}
+              onClick={() => signOut("/admin/sign-in")}
               aria-label="Sair"
               className="grid size-10 place-items-center text-muted"
             >
@@ -131,7 +131,7 @@ function Shell({ children }: { children: React.ReactNode }) {
                   )}
                 >
                   {n.label}
-                  {n.href === "/admin/aprovacoes" && badge > 0 ? (
+                  {n.href === "/admin/approvals" && badge > 0 ? (
                     <span className="rounded-full bg-star px-1.5 text-[10px] font-extrabold text-ink">{badge}</span>
                   ) : null}
                 </Link>

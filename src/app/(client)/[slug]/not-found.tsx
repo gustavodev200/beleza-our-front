@@ -10,7 +10,7 @@ export default function BusinessUnavailable() {
         title="Estabelecimento indisponível"
         description="Este perfil não está no ar no momento. Que tal procurar outro lugar perto de você?"
         action={
-          <Link href="/explorar" className={buttonVariants({ variant: "ink", size: "sm" })}>
+          <Link href="/explore" className={buttonVariants({ variant: "ink", size: "sm" })}>
             Explorar
           </Link>
         }

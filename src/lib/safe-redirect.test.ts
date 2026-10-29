@@ -3,7 +3,7 @@ import { safeRedirect } from "./safe-redirect";
 
 describe("safeRedirect", () => {
   it("mantém caminhos internos", () => {
-    expect(safeRedirect("/agendamentos?scope=history")).toBe("/agendamentos?scope=history");
+    expect(safeRedirect("/appointments?scope=history")).toBe("/appointments?scope=history");
   });
   it.each(["https://evil.com", "//evil.com", "/\\evil.com", "javascript:alert(1)", "evil", "", null, "/\u0000x"])(
     "bloqueia %s",

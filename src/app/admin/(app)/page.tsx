@@ -120,13 +120,13 @@ export default function AdminDashboardPage() {
               icon="storefront"
               label="Estabelecimentos ativos"
               value={String(d!.kpis.activeBusinesses)}
-              href="/admin/estabelecimentos"
+              href="/admin/businesses"
             />
             <Kpi
               icon="verified_user"
               label="Aguardando aprovação"
               value={String(d!.kpis.pendingApprovals)}
-              href="/admin/aprovacoes"
+              href="/admin/approvals"
               tone={d!.kpis.pendingApprovals ? "warn" : undefined}
             />
             <Kpi icon="event_available" label="Agendamentos no período" value={String(d!.kpis.appointments)} />
@@ -186,7 +186,7 @@ export default function AdminDashboardPage() {
             <section className="overflow-hidden rounded-2xl border border-line bg-surface">
               <div className="flex items-center justify-between border-b border-line-soft px-[18px] py-4">
                 <h2 className="m-0 text-base font-bold tracking-normal">Fila de aprovação</h2>
-                <Link href="/admin/aprovacoes" className="text-[13px] font-bold text-primary-strong">
+                <Link href="/admin/approvals" className="text-[13px] font-bold text-primary-strong">
                   Ver todos →
                 </Link>
               </div>

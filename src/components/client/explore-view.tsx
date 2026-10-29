@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { ResultCard } from "@/components/client/business-cards";
+import { UnservedCity } from "@/components/client/unserved-city";
 import { buttonVariants } from "@/components/ui/button";
 import { Chip, Toggle } from "@/components/ui/controls";
 import { Select } from "@/components/ui/form";
@@ -12,6 +13,7 @@ import { Icon } from "@/components/ui/icon";
 import { EmptyState, ErrorState, ListSkeleton, Notice } from "@/components/ui/states";
 import { api, errorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { cityLabel, isServed, type SelectedCity } from "@/lib/city";
 import { EXPLORE_PAGE_SIZE, exploreApiQuery, exploreHref } from "@/lib/explore";
 import type { ExploreParams } from "@/lib/schemas";
 import type { BusinessCard, Category, Page } from "@/lib/types";
@@ -41,11 +43,16 @@ function useCoords(enabled: boolean) {
 }
 
 export function ExploreView({
+  city,
+  served,
   params,
   categories,
   initial,
   serverFailed,
 }: {
+  city: SelectedCity | null;
+  /** Cidades atendidas, só preenchido quando `city` ainda não é atendida. */
+  served: SelectedCity[];
   params: ExploreParams;
   categories: Category[];
   initial: Page<BusinessCard> | null;
@@ -54,19 +61,21 @@ export function ExploreView({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [q, setQ] = useState(params.q ?? "");
-  const [bairro, setBairro] = useState(params.bairro ?? "");
+  const [bairro, setBairro] = useState(params.neighborhood ?? "");
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const byDistance = params.ordem === "distance";
-  const geo = useCoords(byDistance);
+  const unserved = Boolean(city && !isServed(city));
+  const byDistance = params.sort === "distance";
+  // Cidade sem estabelecimentos: nem pede a localização.
+  const geo = useCoords(byDistance && !unserved);
 
   const near = useQuery({
-    queryKey: ["explore", "distance", params, geo.coords],
-    queryFn: () => api<Page<BusinessCard>>(`/businesses?${exploreApiQuery(params, geo.coords)}`),
+    queryKey: ["explore", "distance", params, geo.coords, city?.slug],
+    queryFn: () => api<Page<BusinessCard>>(`/businesses?${exploreApiQuery(params, geo.coords, city?.slug)}`),
     enabled: byDistance && Boolean(geo.coords),
   });
 
   const go = (next: Partial<ExploreParams>) => {
-    const merged: ExploreParams = { ...params, ...next, pagina: next.pagina ?? undefined };
+    const merged: ExploreParams = { ...params, ...next, page: next.page ?? undefined };
     startTransition(() => router.push(exploreHref(merged), { scroll: false }));
   };
 
@@ -74,21 +83,21 @@ export function ExploreView({
   const loading = pending || (byDistance && (geo.loading || near.isPending));
   const failed = byDistance ? near.isError : serverFailed;
   const totalPages = data ? Math.max(1, Math.ceil(data.total / EXPLORE_PAGE_SIZE)) : 1;
-  const page = params.pagina ?? 1;
-  const hasFilters = Boolean(params.q || params.categoria || params.bairro || params.hoje || params.ordem);
+  const page = params.page ?? 1;
+  const hasFilters = Boolean(params.q || params.category || params.neighborhood || params.today || params.sort);
 
   const filters = (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">
         <div className="mb-1.5 text-xs font-bold tracking-[.06em] text-muted uppercase">Categoria</div>
         {[{ id: undefined, name: "Todas", icon: "apps" }, ...categories].map((c) => {
-          const active = params.categoria === c.id;
+          const active = params.category === c.id;
           return (
             <button
               key={c.id ?? "all"}
               type="button"
               aria-pressed={active}
-              onClick={() => go({ categoria: c.id })}
+              onClick={() => go({ category: c.id })}
               className={cn(
                 "flex min-h-10 items-center gap-2.5 rounded-lg px-2.5 text-left text-sm font-semibold",
                 active ? "bg-ink text-white" : "text-ink hover:bg-soft",
@@ -104,15 +113,15 @@ export function ExploreView({
         className="flex flex-col gap-2"
         onSubmit={(e) => {
           e.preventDefault();
-          go({ bairro: bairro.trim().slice(0, 60) || undefined });
+          go({ neighborhood: bairro.trim().slice(0, 60) || undefined });
         }}
       >
-        <label htmlFor="bairro" className="text-xs font-bold tracking-[.06em] text-muted uppercase">
+        <label htmlFor="neighborhood" className="text-xs font-bold tracking-[.06em] text-muted uppercase">
           Bairro
         </label>
         <div className="flex gap-1.5">
           <input
-            id="bairro"
+            id="neighborhood"
             value={bairro}
             onChange={(e) => setBairro(e.target.value)}
             maxLength={60}
@@ -123,28 +132,28 @@ export function ExploreView({
             OK
           </button>
         </div>
-        {params.bairro ? (
+        {params.neighborhood ? (
           <Chip
             selected
             onClick={() => {
               setBairro("");
-              go({ bairro: undefined });
+              go({ neighborhood: undefined });
             }}
             className="self-start"
           >
-            {params.bairro}
+            {params.neighborhood}
             <Icon name="close" size={16} />
           </Chip>
         ) : null}
       </form>
       <div className="flex flex-col gap-2">
-        <label htmlFor="ordem" className="text-xs font-bold tracking-[.06em] text-muted uppercase">
+        <label htmlFor="sort" className="text-xs font-bold tracking-[.06em] text-muted uppercase">
           Ordenar por
         </label>
         <Select
-          id="ordem"
-          value={params.ordem ?? "relevance"}
-          onChange={(e) => go({ ordem: e.target.value as ExploreParams["ordem"] })}
+          id="sort"
+          value={params.sort ?? "relevance"}
+          onChange={(e) => go({ sort: e.target.value as ExploreParams["sort"] })}
           className="py-2.5 text-sm"
         >
           {SORTS.map((s) => (
@@ -157,8 +166,8 @@ export function ExploreView({
       <div className="flex items-center justify-between rounded-[10px] border border-line-strong bg-white px-3 py-1.5 text-sm font-semibold">
         Com horário hoje
         <Toggle
-          checked={Boolean(params.hoje)}
-          onChange={(v) => go({ hoje: v ? "1" : undefined })}
+          checked={Boolean(params.today)}
+          onChange={(v) => go({ today: v ? "1" : undefined })}
           label="Com horário hoje"
         />
       </div>
@@ -169,7 +178,14 @@ export function ExploreView({
     <div className="mx-auto max-w-[1200px] px-4 pt-5 sm:px-6 md:pt-7">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="m-0 text-[30px] font-bold md:text-[40px]">Explorar estabelecimentos</h1>
-        {data ? <span className="text-sm text-muted">{data.total} em Goiânia</span> : null}
+        {data ? (
+          <span className="flex items-center gap-2 text-sm text-muted">
+            {data.total} em {city ? cityLabel(city) : "todas as cidades"}
+            <Link href="/welcome?next=/explore" className="font-bold text-primary-strong">
+              Trocar
+            </Link>
+          </span>
+        ) : null}
       </div>
 
       <form
@@ -218,7 +234,9 @@ export function ExploreView({
         </aside>
         <section aria-live="polite" aria-busy={loading} className="flex min-w-0 flex-[999_1_520px] flex-col gap-3.5">
           {byDistance && geo.error ? <Notice>{geo.error}</Notice> : null}
-          {loading ? (
+          {city && unserved ? (
+            <UnservedCity city={city} served={served} />
+          ) : loading ? (
             <ListSkeleton rows={4} />
           ) : failed ? (
             <ErrorState
@@ -234,7 +252,7 @@ export function ExploreView({
                 <nav aria-label="Paginação" className="flex items-center justify-center gap-2 pt-2">
                   {page > 1 ? (
                     <Link
-                      href={exploreHref({ ...params, pagina: page - 1 })}
+                      href={exploreHref({ ...params, page: page - 1 })}
                       className={buttonVariants({ variant: "outline", size: "sm" })}
                     >
                       ← Anterior
@@ -245,7 +263,7 @@ export function ExploreView({
                   </span>
                   {page < totalPages ? (
                     <Link
-                      href={exploreHref({ ...params, pagina: page + 1 })}
+                      href={exploreHref({ ...params, page: page + 1 })}
                       className={buttonVariants({ variant: "outline", size: "sm" })}
                     >
                       Próxima →
@@ -260,7 +278,7 @@ export function ExploreView({
               title="Nenhum estabelecimento encontrado"
               description="Tente outra categoria ou bairro."
               action={
-                <Link href="/explorar" className={buttonVariants({ variant: "outline-ink", size: "sm" })}>
+                <Link href="/explore" className={buttonVariants({ variant: "outline-ink", size: "sm" })}>
                   Limpar filtros
                 </Link>
               }

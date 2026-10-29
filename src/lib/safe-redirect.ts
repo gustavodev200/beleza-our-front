@@ -1,5 +1,5 @@
 /**
- * Aceita só caminhos internos ("/agendamentos?x=1"). Bloqueia URLs absolutas,
+ * Aceita só caminhos internos ("/appointments?x=1"). Bloqueia URLs absolutas,
  * protocol-relative ("//evil.com"), barras invertidas e esquemas — evita open
  * redirect no parâmetro `next` dos logins.
  */

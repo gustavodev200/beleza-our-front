@@ -9,7 +9,7 @@ export const revalidate = 3600;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const pages: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: "daily", priority: 1 },
-    { url: `${SITE_URL}/explorar`, changeFrequency: "daily", priority: 0.8 },
+    { url: `${SITE_URL}/explore`, changeFrequency: "daily", priority: 0.8 },
   ];
   for (let page = 1; page <= 20; page += 1) {
     const res = await serverGetOr<Page<BusinessCard> | null>(`/businesses?page=${page}&pageSize=20`, null, 3600);

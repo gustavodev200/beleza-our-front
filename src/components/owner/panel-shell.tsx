@@ -18,11 +18,11 @@ import { BlockModal } from "./block-modal";
 import { CounterModal } from "./counter-modal";
 
 const NAV = [
-  { href: "/painel", label: "Visão geral", short: "Início", icon: "space_dashboard", exact: true },
-  { href: "/painel/agenda", label: "Agenda", short: "Agenda", icon: "calendar_month" },
-  { href: "/painel/servicos", label: "Serviços", short: "Serviços", icon: "design_services" },
-  { href: "/painel/profissionais", label: "Profissionais", short: "Equipe", icon: "groups" },
-  { href: "/painel/perfil", label: "Perfil público", short: "Perfil", icon: "storefront" },
+  { href: "/dashboard", label: "Visão geral", short: "Início", icon: "space_dashboard", exact: true },
+  { href: "/dashboard/schedule", label: "Agenda", short: "Agenda", icon: "calendar_month" },
+  { href: "/dashboard/services", label: "Serviços", short: "Serviços", icon: "design_services" },
+  { href: "/dashboard/professionals", label: "Profissionais", short: "Equipe", icon: "groups" },
+  { href: "/dashboard/profile", label: "Perfil público", short: "Perfil", icon: "storefront" },
 ];
 
 interface PanelActions {
@@ -56,8 +56,8 @@ function Shell({ children }: { children: React.ReactNode }) {
   // Painel operacional só depois da aprovação (§5.3).
   useEffect(() => {
     if (business.isPending) return;
-    if (business.data === null || business.data?.status === "DRAFT") router.replace("/painel/cadastro");
-    else if (business.data && !active) router.replace("/painel/status");
+    if (business.data === null || business.data?.status === "DRAFT") router.replace("/dashboard/sign-up");
+    else if (business.data && !active) router.replace("/dashboard/status");
   }, [business.isPending, business.data, active, router]);
 
   if (!active || !business.data) return <Spinner className="min-h-dvh" />;
@@ -74,7 +74,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     >
       <div className="flex min-h-dvh bg-panel-bg">
         <aside className="sticky top-0 hidden h-dvh w-[232px] shrink-0 flex-col gap-5 bg-sidebar px-3.5 py-5 text-sidebar-fg lg:flex">
-          <Link href="/painel" className="flex items-center gap-2 px-1.5 text-white">
+          <Link href="/dashboard" className="flex items-center gap-2 px-1.5 text-white">
             <Icon name="spa" size={24} />
             <b className="text-lg tracking-[-0.02em]">belezaOur</b>
             <span className="ml-auto rounded-[5px] bg-[#2b4048] px-1.5 py-0.5 text-[10px] font-bold">PRO</span>
@@ -125,13 +125,13 @@ function Shell({ children }: { children: React.ReactNode }) {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-line bg-white px-4 sm:px-6">
-            <Link href="/painel" className="flex items-center gap-2 lg:hidden">
+            <Link href="/dashboard" className="flex items-center gap-2 lg:hidden">
               <Icon name="spa" size={24} />
               <b className="text-base">belezaOur</b>
             </Link>
             <div className="flex-1" />
             <Link
-              href="/painel"
+              href="/dashboard"
               className="relative grid size-11 place-items-center rounded-full hover:bg-soft"
               aria-label={pending ? `${pending} agendamentos novos ou pendentes` : "Novos e pendentes"}
             >
@@ -150,7 +150,7 @@ function Shell({ children }: { children: React.ReactNode }) {
               </div>
               <button
                 type="button"
-                onClick={() => signOut("/painel/entrar")}
+                onClick={() => signOut("/dashboard/sign-in")}
                 title="Sair"
                 aria-label="Sair"
                 className="grid size-10 place-items-center rounded-full text-muted hover:bg-soft"

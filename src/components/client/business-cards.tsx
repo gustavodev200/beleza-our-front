@@ -14,11 +14,11 @@ export function bookingHref(
   opts: { serviceId?: string; professionalId?: string; startsAt?: string } = {},
 ) {
   const params = new URLSearchParams();
-  if (opts.serviceId) params.set("servico", opts.serviceId);
-  if (opts.professionalId) params.set("profissional", opts.professionalId);
-  if (opts.startsAt) params.set("inicio", opts.startsAt);
+  if (opts.serviceId) params.set("service", opts.serviceId);
+  if (opts.professionalId) params.set("professional", opts.professionalId);
+  if (opts.startsAt) params.set("start", opts.startsAt);
   const q = params.toString();
-  return `/${slug}/agendar${q ? `?${q}` : ""}`;
+  return `/${slug}/book${q ? `?${q}` : ""}`;
 }
 
 function badgeOf(b: Card): string | null {

@@ -66,9 +66,9 @@ async function parseError(res: Response): Promise<ApiError> {
 
 /** Área do app pela URL atual — define para qual login um 401 leva. */
 export function loginPathFor(pathname: string): string {
-  if (pathname.startsWith("/admin")) return "/admin/entrar";
-  if (pathname.startsWith("/painel") || pathname === "/minha-agenda") return "/painel/entrar";
-  return "/entrar";
+  if (pathname.startsWith("/admin")) return "/admin/sign-in";
+  if (pathname.startsWith("/dashboard") || pathname === "/my-schedule") return "/dashboard/sign-in";
+  return "/sign-in";
 }
 
 let redirecting = false;
@@ -84,9 +84,9 @@ function handleAuthFailure(error: ApiError): void {
   if (pathname.startsWith(login)) return;
   redirecting = true;
   const params = new URLSearchParams({ next: `${pathname}${search}` });
-  if (error.code === "ADMIN_SESSION_EXPIRED") params.set("motivo", "expirada");
-  if (blocked) params.set("motivo", "bloqueada");
-  if (mfa) params.set("motivo", "2fa");
+  if (error.code === "ADMIN_SESSION_EXPIRED") params.set("reason", "expired");
+  if (blocked) params.set("reason", "blocked");
+  if (mfa) params.set("reason", "2fa");
   // Recarga completa de propósito: descarta todo o estado em memória da sessão que caiu.
   // eslint-disable-next-line @next/next/no-location-assign-relative-destination
   window.location.assign(`${login}?${params.toString()}`);

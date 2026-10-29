@@ -119,14 +119,14 @@ export const cityFormSchema = z.object({
   state: z.string().trim().length(2, "UF com 2 letras").toUpperCase(),
 });
 
-/** Filtros de /explorar vindos da URL — nunca confiar no query string. */
+/** Filtros de /explore vindos da URL — nunca confiar no query string. */
 export const exploreParamsSchema = z.object({
   q: z.string().trim().max(80).optional().catch(undefined),
-  categoria: z.string().uuid().optional().catch(undefined),
-  bairro: z.string().trim().max(60).optional().catch(undefined),
-  hoje: z.enum(["1"]).optional().catch(undefined),
-  ordem: z.enum(["relevance", "distance", "rating", "price"]).optional().catch(undefined),
-  pagina: z.coerce.number().int().min(1).max(500).optional().catch(undefined),
+  category: z.string().uuid().optional().catch(undefined),
+  neighborhood: z.string().trim().max(60).optional().catch(undefined),
+  today: z.enum(["1"]).optional().catch(undefined),
+  sort: z.enum(["relevance", "distance", "rating", "price"]).optional().catch(undefined),
+  page: z.coerce.number().int().min(1).max(500).optional().catch(undefined),
 });
 export type ExploreParams = z.infer<typeof exploreParamsSchema>;
 

@@ -7,14 +7,15 @@ import { Icon } from "@/components/ui/icon";
 import { InstallBanner } from "@/components/pwa/install-banner";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { cityLabel, type SelectedCity } from "@/lib/city";
 import { initials } from "@/lib/format";
 import { useMe } from "@/lib/session";
 
 const NAV = [
   { href: "/", label: "Início", icon: "home", match: (p: string) => p === "/" },
-  { href: "/explorar", label: "Explorar", icon: "search", match: (p: string) => p.startsWith("/explorar") },
-  { href: "/agendamentos", label: "Agendamentos", icon: "event", match: (p: string) => p.startsWith("/agendamentos") },
-  { href: "/favoritos", label: "Favoritos", icon: "favorite", match: (p: string) => p.startsWith("/favoritos") },
+  { href: "/explore", label: "Explorar", icon: "search", match: (p: string) => p.startsWith("/explore") },
+  { href: "/appointments", label: "Agendamentos", icon: "event", match: (p: string) => p.startsWith("/appointments") },
+  { href: "/favorites", label: "Favoritos", icon: "favorite", match: (p: string) => p.startsWith("/favorites") },
 ];
 
 export function useUnreadCount(enabled: boolean) {
@@ -39,7 +40,7 @@ function Logo({ className }: { className?: string }) {
 function Bell({ hasUnread }: { hasUnread: boolean }) {
   return (
     <Link
-      href="/notificacoes"
+      href="/notifications"
       className="relative grid size-11 place-items-center rounded-full hover:bg-soft"
       aria-label={hasUnread ? "Notificações (há novas)" : "Notificações"}
     >
@@ -51,7 +52,7 @@ function Bell({ hasUnread }: { hasUnread: boolean }) {
   );
 }
 
-export function ClientShell({ children }: { children: React.ReactNode }) {
+export function ClientShell({ children, city }: { children: React.ReactNode; city: SelectedCity | null }) {
   const pathname = usePathname();
   const { data: me } = useMe();
   const { data: unread = 0 } = useUnreadCount(Boolean(me));
@@ -60,10 +61,10 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
   const tabs = [
     ...NAV,
     {
-      href: "/perfil",
+      href: "/profile",
       label: "Perfil",
       icon: "person",
-      match: (p: string) => p.startsWith("/perfil") || p.startsWith("/entrar"),
+      match: (p: string) => p.startsWith("/profile") || p.startsWith("/sign-in"),
     },
   ];
 
@@ -97,12 +98,17 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
           <div className="flex-1 md:hidden" />
-          <span className="hidden items-center gap-1 rounded-full border border-line-strong px-2.5 py-1 text-xs font-semibold max-sm:flex md:hidden">
-            <Icon name="location_on" size={15} />
-            Goiânia
-          </span>
           <Link
-            href={isOwner ? "/painel" : "/painel/entrar"}
+            href={`/welcome?next=${encodeURIComponent(pathname)}`}
+            aria-label={city ? `Cidade: ${cityLabel(city)}. Trocar cidade` : "Escolher cidade"}
+            className="inline-flex min-h-10 max-w-[160px] items-center gap-1 rounded-full border border-line-strong px-3 text-xs font-semibold hover:border-ink"
+          >
+            <Icon name="location_on" size={16} className="text-primary-strong" />
+            <span className="truncate">{city ? city.name : "Escolher cidade"}</span>
+            <Icon name="expand_more" size={16} className="text-muted" />
+          </Link>
+          <Link
+            href={isOwner ? "/dashboard" : "/dashboard/sign-in"}
             className="hidden min-h-10 items-center rounded-[10px] border border-ink bg-surface px-3.5 text-[13px] font-bold whitespace-nowrap hover:bg-ink hover:text-white lg:inline-flex"
           >
             {isOwner ? "Meu painel" : "Para profissionais"}
@@ -110,7 +116,7 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
           {me ? <Bell hasUnread={unread > 0} /> : null}
           {me ? (
             <Link
-              href="/perfil"
+              href="/profile"
               title={me.name}
               aria-label="Meu perfil"
               className="hidden size-9 place-items-center rounded-full bg-[oklch(0.92_0.04_20)] text-[13px] font-bold text-[oklch(0.38_0.1_20)] md:grid"
@@ -119,7 +125,7 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
             </Link>
           ) : (
             <Link
-              href={`/entrar?next=${encodeURIComponent(pathname)}`}
+              href={`/sign-in?next=${encodeURIComponent(pathname)}`}
               className="inline-flex min-h-10 items-center rounded-[10px] bg-ink px-3.5 text-[13px] font-bold whitespace-nowrap text-white"
             >
               <span className="sm:hidden">Entrar</span>
@@ -140,8 +146,8 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
           <Icon name="spa" size={18} />
           belezaOur
         </span>
-        <span>Beleza, bem-estar e praticidade em um só lugar · Goiânia</span>
-        <Link href="/painel/entrar" className="font-semibold text-ink-2 hover:text-ink">
+        <span>Beleza, bem-estar e praticidade em um só lugar{city ? ` · ${city.name}` : ""}</span>
+        <Link href="/dashboard/sign-in" className="font-semibold text-ink-2 hover:text-ink">
           Área do profissional
         </Link>
       </footer>

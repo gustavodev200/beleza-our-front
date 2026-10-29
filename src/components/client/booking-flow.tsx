@@ -233,7 +233,7 @@ export function BookingFlow({
     onSuccess: (appt) => {
       void qc.invalidateQueries({ queryKey: ["appointments"] });
       void qc.invalidateQueries({ queryKey: ["notifications"] });
-      router.push(`/agendamentos/${appt.id}/confirmado`);
+      router.push(`/appointments/${appt.id}/confirmed`);
     },
     onError: (e) => {
       if (e instanceof Error && e.message === "otp") return; // erro já exibido no campo do código
@@ -250,7 +250,7 @@ export function BookingFlow({
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["appointments"] });
       toast("Horário remarcado — o estabelecimento foi avisado");
-      router.push("/agendamentos");
+      router.push("/appointments");
     },
     onError: onSlotError,
   });

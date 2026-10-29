@@ -11,9 +11,9 @@ import type { Me, Role } from "./types";
 export const meKey = ["me"] as const;
 
 const LOGIN_BY_ROLE: Record<Role, string> = {
-  CLIENT: "/entrar",
-  BUSINESS_OWNER: "/painel/entrar",
-  SUPER_ADMIN: "/admin/entrar",
+  CLIENT: "/sign-in",
+  BUSINESS_OWNER: "/dashboard/sign-in",
+  SUPER_ADMIN: "/admin/sign-in",
 };
 
 /**
@@ -61,7 +61,7 @@ export function RequireRole({ role, children }: { role: Role; children: React.Re
   useEffect(() => {
     if (isPending || allowed) return;
     const login = LOGIN_BY_ROLE[role];
-    router.replace(`${login}?next=${encodeURIComponent(pathname)}${me ? "&motivo=papel" : ""}`);
+    router.replace(`${login}?next=${encodeURIComponent(pathname)}${me ? "&reason=role" : ""}`);
   }, [isPending, allowed, me, pathname, router, role]);
 
   if (!allowed) return <Spinner className="min-h-[50dvh]" />;

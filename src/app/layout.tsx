@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: "belezaOur — beleza e bem-estar perto de você", template: "%s · belezaOur" },
   description:
-    "Compare salões, barbearias e profissionais em Goiânia e agende seu horário em poucos cliques, sem trocar mensagens.",
+    "Compare salões, barbearias e profissionais da sua cidade e agende seu horário em poucos cliques, sem trocar mensagens.",
   applicationName: "belezaOur",
   appleWebApp: { capable: true, title: "belezaOur", statusBarStyle: "default" },
   formatDetection: { telephone: false },

@@ -22,11 +22,11 @@ describe("schemas", () => {
     ).toBe(false);
   });
   it("descarta query string inválida em vez de quebrar", () => {
-    expect(exploreParamsSchema.parse({ categoria: "x", ordem: "hack", pagina: "-1", q: "unha" })).toEqual({
+    expect(exploreParamsSchema.parse({ category: "x", sort: "hack", page: "-1", q: "unha" })).toEqual({
       q: "unha",
-      categoria: undefined,
-      ordem: undefined,
-      pagina: undefined,
+      category: undefined,
+      sort: undefined,
+      page: undefined,
     });
   });
 });

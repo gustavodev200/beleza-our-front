@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
+import { CITY_COOKIE, parseCity } from "@/lib/city";
 
 /**
  * 1. CSP com nonce por requisição (scripts só com o nonce; nada de unsafe-inline).
@@ -31,20 +32,35 @@ function buildCsp(nonce: string): string {
   ].join("; ");
 }
 
-const CLIENT_PROTECTED = ["/agendamentos", "/favoritos", "/notificacoes", "/perfil"];
-const OWNER_PUBLIC = ["/painel/entrar", "/painel/cadastro", "/painel/esqueci-senha", "/painel/redefinir-senha"];
+const CLIENT_PROTECTED = ["/appointments", "/favorites", "/notifications", "/profile"];
+const OWNER_PUBLIC = ["/dashboard/sign-in", "/dashboard/sign-up", "/dashboard/forgot-password", "/dashboard/reset-password"];
 
 function loginFor(pathname: string): string | null {
-  if (pathname.startsWith("/admin")) return pathname.startsWith("/admin/entrar") ? null : "/admin/entrar";
-  if (pathname === "/minha-agenda") return "/painel/entrar";
-  if (pathname.startsWith("/painel")) {
-    return OWNER_PUBLIC.some((p) => pathname.startsWith(p)) ? null : "/painel/entrar";
+  if (pathname.startsWith("/admin")) return pathname.startsWith("/admin/sign-in") ? null : "/admin/sign-in";
+  if (pathname === "/my-schedule") return "/dashboard/sign-in";
+  if (pathname.startsWith("/dashboard")) {
+    return OWNER_PUBLIC.some((p) => pathname.startsWith(p)) ? null : "/dashboard/sign-in";
   }
-  return CLIENT_PROTECTED.some((p) => pathname === p || pathname.startsWith(`${p}/`)) ? "/entrar" : null;
+  return CLIENT_PROTECTED.some((p) => pathname === p || pathname.startsWith(`${p}/`)) ? "/sign-in" : null;
 }
+
+/** Páginas que exigem cidade escolhida; /welcome é o onboarding. Robôs passam direto (SEO). */
+const CITY_GATED = ["/", "/explore"];
+const BOT = /bot|crawl|spider|slurp|lighthouse|facebookexternalhit|whatsapp|preview/i;
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+
+  if (
+    CITY_GATED.includes(pathname) &&
+    !parseCity(request.cookies.get(CITY_COOKIE)?.value) &&
+    !BOT.test(request.headers.get("user-agent") ?? "")
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/welcome";
+    url.search = pathname === "/" ? "" : `?next=${encodeURIComponent(`${pathname}${search}`)}`;
+    return NextResponse.redirect(url);
+  }
 
   const login = loginFor(pathname);
   if (login && !getSessionCookie(request, { cookiePrefix: "belezaour" })) {
