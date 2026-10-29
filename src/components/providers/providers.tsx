@@ -2,8 +2,8 @@
 
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import { Toaster } from "sonner";
 import { ApiError } from "@/lib/api";
+import { AppToaster } from "@/components/providers/app-toaster";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 
 function shouldRetry(failureCount: number, error: unknown): boolean {
@@ -27,16 +27,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={client}>
       {children}
-      <Toaster
-        position="bottom-center"
-        offset={88}
-        toastOptions={{
-          classNames: {
-            toast: "!rounded-xl !bg-ink !text-white !border-0 !shadow-[0_12px_32px_rgba(0,0,0,.2)] !font-medium",
-            description: "!text-sidebar-fg",
-          },
-        }}
-      />
+      <AppToaster />
       <ServiceWorkerRegister />
     </QueryClientProvider>
   );
