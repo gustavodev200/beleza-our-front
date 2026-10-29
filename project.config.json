@@ -1,0 +1,14 @@
+{
+  "$schema": "./project.config.schema.json",
+  "project": "belezaour-frontend",
+  "preset": "prisma-postgres",
+
+  "frontend": "nextjs",
+  "backend": "nestjs",
+  "database": "prisma-postgres",
+  "auth": "better-auth",
+  "email": "resend",
+  "storage": "cloudinary",
+
+  "notes": "Frontend (web responsiva + PWA) do belezaOur. Backend NestJS em ../beleza-our-back (API em /api, Better Auth em /api/auth). O front não acessa banco: toda regra de negócio e autorização vive na API; o Next só faz proxy de /api para mesma origem."
+}

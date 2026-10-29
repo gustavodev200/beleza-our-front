@@ -1,5 +1,31 @@
 # CLAUDE.md — Workspace de Desenvolvimento com Agentes de IA
 
+## Projeto: belezaOur — Frontend
+
+Este diretório é o **frontend do belezaOur** (web responsiva + PWA, um único
+app), marketplace de agendamento de serviços de beleza (lançamento em
+Goiânia-GO). O backend vive em `../beleza-our-back`.
+
+**Fonte de verdade do produto:** [docs/mvp-spec.md](docs/mvp-spec.md) — roles
+(`CLIENT`, `BUSINESS_OWNER`, `SUPER_ADMIN`), features por role, mapa de telas,
+identidade visual e requisitos não funcionais. Leia antes de qualquer
+`/speckit-specify`, `/speckit-plan` ou implementação. Referência visual e de
+fluxo: `belezaOur.dc.html`.
+
+Pontos críticos para o frontend:
+
+- Três áreas: app do cliente (§4), painel do dono (§5), dashboard admin (§6);
+  mapa de telas em §9.
+- Identidade visual (§10): Noto Sans, Material Symbols Outlined, paleta e cores
+  de status definidas — não inventar tokens.
+- Mobile-first, alvos de toque ≥ 44px, contraste AA, PWA com offline, páginas
+  públicas pré-renderizadas para SEO, LCP < 2,5s (§11).
+- Estados de carregamento, vazio e erro em toda lista; toast em toda ação.
+
+Como este é um projeto concreto, o princípio 5 abaixo ("sem funcionalidade de
+negócio") vale só para mudanças no template em si, não para o código do
+belezaOur.
+
 Este repositório é um **workspace/template pessoal**. Ele não é uma aplicação
 de negócio: não contém funcionalidades de produto, apenas estrutura,
 configuração, skills, comandos, templates e regras reutilizáveis para iniciar
@@ -72,8 +98,9 @@ Specification → Clarification → Plan → Tasks → Implementation → Tests 
 
 As primeiras 5 fases usam o motor oficial do spec-kit (skills `speckit-*`,
 instaladas via `specify` CLI); `/test`, `/security` e `/review` são
-comandos próprios deste workspace. Veja a seção "SpecKit" do
-[README.md](README.md) para o guia completo de uso.
+comandos próprios deste workspace. Veja a seção "SpecKit" de
+[docs/workspace-template.md](docs/workspace-template.md) para o guia completo de uso
+(README original do template; o [README.md](README.md) agora descreve o frontend).
 
 ## Princípios gerais para o agente
 
@@ -105,8 +132,8 @@ precisam ser editados são:
 - `project.config.json` (criado a partir do exemplo do preset escolhido)
 - `.specify/memory/constitution.md` (rode `/speckit-constitution` para
   anexar princípios específicos do projeto, sem apagar os herdados)
-- README do projeto (este README.md descreve o workspace-template, não o
-  produto final)
+- README do projeto (no belezaOur, o README.md já descreve o frontend; o do
+  template foi movido para `docs/workspace-template.md`)
 
 Tudo em `.claude/skills/`, `.claude/commands/` e `.specify/templates/` é
 reutilizado sem alteração entre projetos, salvo necessidade de nova stack

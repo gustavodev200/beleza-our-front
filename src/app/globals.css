@@ -1,0 +1,163 @@
+@import "tailwindcss";
+@import "material-symbols/outlined.css";
+
+/*
+ * Design system belezaOur — tokens extraídos de belezaOur.dc.html e de
+ * docs/mvp-spec.md §10. Toda cor de marca vive aqui; componentes usam as
+ * classes geradas (bg-ink, text-muted, border-line, bg-primary...).
+ */
+@theme {
+  --font-sans: var(--font-noto), "Noto Sans", system-ui, sans-serif;
+
+  --color-ink: #14242b;
+  --color-ink-2: #3c4a51;
+  --color-muted: #66737a;
+  --color-subtle: #8d989e;
+  --color-bg: #f7f7f5;
+  --color-panel-bg: #f4f5f4;
+  --color-surface: #ffffff;
+  --color-soft: #eceeee;
+  --color-line: #e6e9ea;
+  --color-line-strong: #e1e5e7;
+  --color-line-soft: #f1f2f2;
+  --color-sidebar: #14242b;
+  --color-sidebar-2: #1f333a;
+  --color-sidebar-fg: #c4d0d4;
+
+  --color-primary: oklch(0.5 0.09 210);
+  --color-primary-strong: oklch(0.44 0.09 210);
+  --color-primary-soft: oklch(0.955 0.02 200);
+  --color-primary-tint: #e9f2f2;
+  --color-accent: oklch(0.6 0.13 12);
+  --color-accent-soft: oklch(0.82 0.08 12);
+  --color-heart: oklch(0.62 0.15 10);
+  --color-star: #f5a524;
+
+  --color-ok-bg: #e6f5ec;
+  --color-ok: #1d7a44;
+  --color-warn-bg: #fdf1d8;
+  --color-warn: #8a5208;
+  --color-danger-bg: #fdeceb;
+  --color-danger: #b42318;
+  --color-danger-line: #f3c7c3;
+  --color-done-bg: #eef0f4;
+  --color-done: #4b5563;
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 18px;
+  --radius-3xl: 24px;
+
+  --shadow-card: 0 14px 32px rgba(20, 36, 43, 0.09);
+  --shadow-float: 0 18px 40px rgba(20, 36, 43, 0.14);
+  --shadow-modal: 0 30px 80px rgba(20, 36, 43, 0.3);
+  --shadow-search: 0 8px 24px rgba(20, 36, 43, 0.06);
+
+  --animate-fade-in: fade-in 0.15s ease-out;
+  --animate-slide-up: slide-up 0.2s ease-out;
+  --animate-slide-left: slide-left 0.2s ease-out;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes slide-left {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-bg font-sans text-ink antialiased;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    letter-spacing: -0.02em;
+  }
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility hatch {
+  background: repeating-linear-gradient(135deg, #f2f4f4 0 6px, #e8ebec 6px 12px);
+}
+
+@utility hatch-closed {
+  background: repeating-linear-gradient(135deg, #f7f7f5 0 8px, #eff1f1 8px 16px);
+}
+
+@utility pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 8px);
+}
+
+.material-symbols-outlined {
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
+  user-select: none;
+}
+.material-symbols-outlined.icon-fill {
+  font-variation-settings:
+    "FILL" 1,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
