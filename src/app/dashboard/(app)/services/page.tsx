@@ -4,13 +4,14 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { PageTitle, Toggle } from "@/components/ui/controls";
-import { Field, Input, Select } from "@/components/ui/form";
+import { Chip, PageTitle, Toggle } from "@/components/ui/controls";
+import { Field, Input, SectionLabel, Select } from "@/components/ui/form";
+import { Icon } from "@/components/ui/icon";
 import { Modal } from "@/components/ui/overlay";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api, errorMessage } from "@/lib/api";
 import { formatDuration, formatMoney, parseMoneyToCents } from "@/lib/format";
-import { ownerKeys, useCategories, useOwnerServices } from "@/lib/owner-queries";
+import { ownerKeys, useCategories, useOwnerProfessionals, useOwnerServices } from "@/lib/owner-queries";
 import { serviceFormSchema } from "@/lib/schemas";
 import type { OwnerService } from "@/lib/types";
 
@@ -28,6 +29,15 @@ function ServiceForm({ service, open, onClose }: { service: OwnerService | null;
 function ServiceFormBody({ service, onClose }: { service: OwnerService | null; onClose: () => void }) {
   const qc = useQueryClient();
   const categories = useCategories();
+  const pros = useOwnerProfessionals();
+  const activePros = (pros.data ?? []).filter((p) => p.active);
+  // Serviço novo: todas as profissionais ativas, até o dono desmarcar.
+  const [chosenPros, setChosenPros] = useState<string[] | null>(
+    service ? service.professionals.map((p) => p.professionalId) : null,
+  );
+  const professionalIds = chosenPros ?? activePros.map((p) => p.id);
+  const togglePro = (id: string) =>
+    setChosenPros(professionalIds.includes(id) ? professionalIds.filter((x) => x !== id) : [...professionalIds, id]);
   const [name, setName] = useState(service?.name ?? "");
   const [categoryId, setCategoryId] = useState(service?.category.id ?? "");
   const [duration, setDuration] = useState(service?.durationMinutes ?? 30);
@@ -43,6 +53,7 @@ function ServiceFormBody({ service, onClose }: { service: OwnerService | null; o
     onSuccess: () => {
       toast(service ? "Serviço atualizado" : "Serviço criado");
       void qc.invalidateQueries({ queryKey: ownerKeys.services });
+      void qc.invalidateQueries({ queryKey: ownerKeys.professionals });
       onClose();
     },
     onError: (e) => toast.error(errorMessage(e)),
@@ -63,7 +74,8 @@ function ServiceFormBody({ service, onClose }: { service: OwnerService | null; o
       setErrors(errs);
       return;
     }
-    save.mutate(parsed.data);
+    // Sem a lista carregada, o servidor usa todas as ativas no serviço novo.
+    save.mutate(pros.data ? { ...parsed.data, professionalIds } : parsed.data);
   };
 
   return (
@@ -109,6 +121,27 @@ function ServiceFormBody({ service, onClose }: { service: OwnerService | null; o
           )}
         </Field>
       </div>
+      {activePros.length ? (
+        <div className="flex flex-col gap-2">
+          <SectionLabel>Quem faz</SectionLabel>
+          <div className="-mt-1 flex flex-wrap gap-1.5">
+            {activePros.map((p) => (
+              <Chip key={p.id} selected={professionalIds.includes(p.id)} onClick={() => togglePro(p.id)}>
+                {p.name}
+              </Chip>
+            ))}
+          </div>
+          {!professionalIds.length ? (
+            <p className="m-0 text-[13px] font-medium text-danger">
+              Sem profissional, o serviço não aparece para as clientes.
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <p className="m-0 text-[13px] text-muted">
+          Cadastre uma profissional em Equipe para o serviço aparecer para as clientes.
+        </p>
+      )}
       <div className="flex items-center justify-between rounded-[10px] border border-line px-3 py-1.5 text-sm font-semibold">
         Visível no app
         <Toggle checked={visible} onChange={setVisible} label="Visível no app" />
@@ -191,7 +224,15 @@ export default function ServicesPage() {
                 key={s.id}
                 className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 border-b border-panel-bg px-4 py-3.5 text-sm last:border-0 md:grid-cols-[2fr_1fr_1fr_1fr_150px_88px] md:px-[18px]"
               >
-                <b className="min-w-0 truncate">{s.name}</b>
+                <span className="flex min-w-0 flex-col">
+                  <b className="truncate">{s.name}</b>
+                  {s.visible && !s.professionals.length ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-danger">
+                      <Icon name="warning" size={14} />
+                      Sem profissional — não aparece para as clientes
+                    </span>
+                  ) : null}
+                </span>
                 <span className="hidden text-ink-2 md:block">{s.category.name}</span>
                 <span className="col-start-1 text-[13px] text-muted md:col-auto md:text-sm md:text-ink-2">
                   <span className="md:hidden">{s.category.name} · </span>

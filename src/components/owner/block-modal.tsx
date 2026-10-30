@@ -34,7 +34,7 @@ export function BlockModal({
     <Modal
       open={open}
       onOpenChange={(o) => !o && onClose()}
-      title="Bloquear horário"
+      title="Pausa ou bloqueio"
       description="O período some na hora da agenda online das clientes."
     >
       <BlockForm preset={preset} onClose={onClose} />
@@ -46,20 +46,25 @@ function BlockForm({ preset, onClose }: { preset?: { professionalId?: string; da
   const qc = useQueryClient();
   const pros = useOwnerProfessionals();
   const today = localDate();
-  const [chosenPro, setProfessionalId] = useState<string | null>(preset?.professionalId ?? null);
+  // Sem profissional = pausa do estabelecimento todo (fecha para todas).
+  const [professionalId, setProfessionalId] = useState<string | null>(preset?.professionalId ?? null);
   const [date, setDate] = useState(preset?.date && preset.date >= today ? preset.date : today);
   const [start, setStart] = useState("13:00");
   const [duration, setDuration] = useState<(typeof BLOCK_DURATIONS)[number]["id"]>("2h");
-  const [reason, setReason] = useState<BlockReason>("APPOINTMENT");
+  const [reason, setReason] = useState<BlockReason>(preset?.professionalId ? "APPOINTMENT" : "BREAK");
   const [conflicts, setConflicts] = useState<BlockResult["conflicts"]>([]);
-  // Sem escolha explícita, vale a primeira profissional ativa.
-  const professionalId = chosenPro ?? pros.data?.find((p) => p.active)?.id ?? null;
 
   const save = useMutation({
     mutationFn: () =>
       api<BlockResult>("/owner/blocks", {
         method: "POST",
-        body: { professionalId, date, duration, reason, ...(duration === "day" ? {} : { start }) },
+        body: {
+          ...(professionalId ? { professionalId } : {}),
+          date,
+          duration,
+          reason,
+          ...(duration === "day" ? {} : { start }),
+        },
       }),
     onSuccess: (res) => {
       void qc.invalidateQueries({ queryKey: ownerKeys.agenda });
@@ -69,7 +74,7 @@ function BlockForm({ preset, onClose }: { preset?: { professionalId?: string; da
         toast("Período bloqueado — há agendamentos nesse horário");
         return;
       }
-      toast("Período bloqueado na agenda online");
+      toast(professionalId ? "Período bloqueado na agenda online" : "Estabelecimento fechado nesse período");
       onClose();
     },
     onError: (e) => toast.error(errorMessage(e)),
@@ -93,8 +98,11 @@ function BlockForm({ preset, onClose }: { preset?: { professionalId?: string; da
         </>
       ) : (
         <>
-          <SectionLabel>Profissional</SectionLabel>
+          <SectionLabel>Quem para</SectionLabel>
           <div className="-mt-2 flex flex-wrap gap-1.5">
+            <Chip selected={professionalId === null} onClick={() => setProfessionalId(null)}>
+              Estabelecimento todo (fechar)
+            </Chip>
             {(pros.data ?? [])
               .filter((p) => p.active)
               .map((p) => (
@@ -147,8 +155,8 @@ function BlockForm({ preset, onClose }: { preset?: { professionalId?: string; da
               </Chip>
             ))}
           </div>
-          <Button size="lg" onClick={() => save.mutate()} loading={save.isPending} disabled={!professionalId}>
-            Bloquear período
+          <Button size="lg" onClick={() => save.mutate()} loading={save.isPending}>
+            {professionalId ? "Bloquear período" : "Fechar nesse período"}
           </Button>
         </>
       )}

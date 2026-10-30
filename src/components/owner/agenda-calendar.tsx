@@ -18,7 +18,7 @@ export type AgendaView = "week" | "day";
 
 type EventKind =
   | { kind: "appt"; appt: OwnerAppointment }
-  | { kind: "block"; block: TimeBlock; proName: string }
+  | { kind: "block"; block: TimeBlock; proName: string | null }
   | { kind: "break" };
 
 const VIEW_TYPE: Record<AgendaView, string> = { week: "timeGridWeek", day: "timeGridDay" };
@@ -115,7 +115,8 @@ export default function AgendaCalendar({
       });
     }
     for (const b of data?.blocks ?? []) {
-      if (hidden.has(b.professionalId)) continue;
+      // Pausa do estabelecimento todo aparece sempre, qualquer que seja o filtro.
+      if (b.professionalId !== null && hidden.has(b.professionalId)) continue;
       list.push({
         id: `block-${b.id}`,
         start: b.startsAt,
@@ -123,7 +124,11 @@ export default function AgendaCalendar({
         title: "Bloqueado",
         color: GRAY,
         contrastColor: "#fff",
-        extendedProps: { kind: "block", block: b, proName: proName(b.professionalId) } satisfies EventKind,
+        extendedProps: {
+          kind: "block",
+          block: b,
+          proName: b.professionalId === null ? null : proName(b.professionalId),
+        } satisfies EventKind,
       });
     }
     return list;
@@ -163,10 +168,11 @@ export default function AgendaCalendar({
         nowIndicatorDotClass="bo-now-dot"
         columnEventInnerClass="bo-ev-inner"
         backgroundEventClass="bo-break"
-        backgroundEventContent={() => <span className="bo-break-label">Pausa</span>}
+        backgroundEventContent={() => <span className="bo-break-label">Pausa · fechado</span>}
         columnEventClass={(info) => {
           const x = info.event.extendedProps as EventKind;
-          if (x.kind === "block") return "bo-ev bo-ev-block";
+          if (x.kind === "block")
+            return x.block.professionalId === null || x.block.reason === "BREAK" ? "bo-ev bo-ev-pause" : "bo-ev bo-ev-block";
           if (x.kind !== "appt") return "bo-ev";
           return [
             "bo-ev",
@@ -188,8 +194,10 @@ export default function AgendaCalendar({
           if (x.kind === "block") {
             const reason = BLOCK_REASONS.find((r) => r.id === x.block.reason)?.label;
             return (
-              <div className="bo-ev-body" title="Toque para remover o bloqueio">
-                <span className="bo-ev-title">Bloqueado · {firstName(x.proName)}</span>
+              <div className="bo-ev-body" title="Toque para remover">
+                <span className="bo-ev-title">
+                  {x.proName === null ? "Fechado" : `Bloqueado · ${firstName(x.proName)}`}
+                </span>
                 <span className="bo-ev-sub">{reason}</span>
               </div>
             );

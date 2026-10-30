@@ -104,7 +104,9 @@
 }
 
 .bo-agenda .bo-break {
-  background: repeating-linear-gradient(135deg, #f2f4f4 0 6px, #e8ebec 6px 12px);
+  /* Pausa = estabelecimento fechado: âmbar, distinto do hachurado cinza de "fora do expediente". */
+  background: repeating-linear-gradient(135deg, #fff4de 0 6px, #ffe8bf 6px 12px);
+  opacity: 1;
   border-radius: 8px;
   margin-inline: 3px;
 }
@@ -117,7 +119,7 @@
   background: rgb(255 255 255 / 0.85);
   font-size: 10px;
   font-weight: 700;
-  color: var(--color-muted);
+  color: #8a5300;
 }
 
 /* ---------- Agora ---------- */
@@ -179,6 +181,14 @@
     0 0 0 2px var(--color-ink),
     0 8px 18px rgb(20 36 43 / 0.16);
   z-index: 6;
+}
+
+.bo-agenda .bo-ev-pause {
+  --bo-ev-ink: #8a5300;
+  background: repeating-linear-gradient(135deg, #fff4de 0 6px, #ffe8bf 6px 12px);
+  color: #8a5300;
+  border: 1px solid #f3cf8c;
+  border-left: 4px solid #e59a1a;
 }
 
 .bo-agenda .bo-ev-block {

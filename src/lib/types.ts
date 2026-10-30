@@ -8,7 +8,7 @@ export type BusinessType = "SALON" | "BARBERSHOP" | "STUDIO" | "AUTONOMOUS" | "A
 export type BusinessStatus = "DRAFT" | "PENDING" | "ACTIVE" | "REJECTED" | "SUSPENDED";
 export type AppointmentStatus = "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELED" | "NO_SHOW";
 export type AppointmentOrigin = "APP" | "COUNTER";
-export type BlockReason = "APPOINTMENT" | "DAY_OFF" | "EXTENDED_LUNCH" | "COURSE";
+export type BlockReason = "APPOINTMENT" | "DAY_OFF" | "EXTENDED_LUNCH" | "COURSE" | "BREAK";
 export type ReviewTag = "PUNCTUAL" | "ATTENTIVE" | "CLEAN_ENVIRONMENT" | "GREAT_RESULT" | "FAIR_PRICE";
 export type OwnerAction = "confirm" | "complete" | "cancel" | "no-show" | "reopen";
 
@@ -255,7 +255,8 @@ export interface OwnerProfessional {
 
 export interface TimeBlock {
   id: string;
-  professionalId: string;
+  /** null = pausa do estabelecimento todo (fechado para todas). */
+  professionalId: string | null;
   startsAt: string;
   endsAt: string;
   reason: BlockReason;

@@ -4,7 +4,7 @@ import { Toggle } from "@/components/ui/controls";
 import { Select } from "@/components/ui/form";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/cn";
-import { WEEKDAY_LONG, WEEKDAY_SHORT } from "@/lib/format";
+import { WEEKDAY_LONG, WEEKDAY_SHORT, localDate, weekdayOf } from "@/lib/format";
 import { daySchema } from "@/lib/schemas";
 import type { OwnerHours } from "@/lib/types";
 
@@ -146,6 +146,7 @@ export function HoursEditor({
   const setBreak = (r: DayRow, index: number, patch: Partial<BreakRow>) =>
     set(r.weekday, { breaks: r.breaks.map((b, i) => (i === index ? { ...b, ...patch } : b)) });
   const openCount = rows.filter((r) => r.open).length;
+  const todayWeekday = weekdayOf(localDate());
 
   return (
     <div className="flex flex-col gap-2">
@@ -161,6 +162,11 @@ export function HoursEditor({
               <div className="flex min-h-11 items-center gap-3">
                 <Toggle checked={r.open} onChange={(v) => set(r.weekday, { open: v })} label={`Abrir ${day}`} />
                 <b className={cn("text-[15px]", !r.open && "text-muted")}>{day}</b>
+                {r.weekday === todayWeekday ? (
+                  <span className="rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-bold text-primary-strong">
+                    Hoje
+                  </span>
+                ) : null}
               </div>
 
               {r.open ? (

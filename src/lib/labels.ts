@@ -82,6 +82,7 @@ export const REVIEW_TAGS: { id: ReviewTag; label: string }[] = [
 ];
 
 export const BLOCK_REASONS: { id: BlockReason; label: string }[] = [
+  { id: "BREAK", label: "Pausa / intervalo" },
   { id: "APPOINTMENT", label: "Compromisso" },
   { id: "DAY_OFF", label: "Folga" },
   { id: "EXTENDED_LUNCH", label: "Almoço estendido" },
@@ -89,6 +90,7 @@ export const BLOCK_REASONS: { id: BlockReason; label: string }[] = [
 ];
 
 export const BLOCK_DURATIONS = [
+  { id: "30m", label: "30 min" },
   { id: "1h", label: "1h" },
   { id: "2h", label: "2h" },
   { id: "4h", label: "4h" },

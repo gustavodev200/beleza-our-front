@@ -155,10 +155,10 @@ function AgendaView() {
             <Button
               variant="outline"
               size="sm"
-              icon="block"
+              icon="coffee"
               onClick={() => openBlock({ date: anchor >= today ? anchor : today })}
             >
-              Bloquear
+              Pausa
             </Button>
             <Button
               variant="primary"
@@ -224,8 +224,12 @@ function AgendaView() {
               Não compareceu / concluído
             </span>
             <span className="flex items-center gap-2">
+              <span className="h-3 w-[18px] rounded-[3px] border-l-[3px] border-[#e59a1a] bg-[#ffe8bf]" />
+              Pausa / intervalo (fechado)
+            </span>
+            <span className="flex items-center gap-2">
               <span className="h-3 w-[18px] rounded-[3px] hatch" />
-              Pausa / fechado / bloqueio
+              Fora do expediente / bloqueio
             </span>
           </div>
         </div>
