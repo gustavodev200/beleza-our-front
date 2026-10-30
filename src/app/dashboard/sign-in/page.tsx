@@ -15,7 +15,7 @@ import { api } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { ownerHome } from "@/lib/owner";
 import { safeRedirect } from "@/lib/safe-redirect";
-import { ownerSignInSchema } from "@/lib/schemas";
+import { signInSchema } from "@/lib/schemas";
 import { meKey } from "@/lib/session";
 import type { Me } from "@/lib/types";
 import { authErrorMessage } from "@/lib/use-otp";
@@ -36,7 +36,7 @@ function SignInForm() {
   const [error, setError] = useState<string | null>(null);
   const [unverified, setUnverified] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
-  const form = useForm<z.infer<typeof ownerSignInSchema>>({ resolver: zodResolver(ownerSignInSchema) });
+  const form = useForm<z.infer<typeof signInSchema>>({ resolver: zodResolver(signInSchema) });
 
   const onSubmit = form.handleSubmit(async (values) => {
     setError(null);

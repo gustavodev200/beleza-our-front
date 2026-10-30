@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import type { z } from "zod";
 import { HoursEditor, hoursToRows, rowsToPayload, type DayRow } from "@/components/owner/hours-editor";
 import { BusinessImagesEditor } from "@/components/owner/image-upload";
+import { TermsCheckbox } from "@/components/shared/terms-checkbox";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/controls";
 import { Field, Input, Select } from "@/components/ui/form";
@@ -18,7 +19,14 @@ import { Notice, Spinner } from "@/components/ui/states";
 import { ApiError, api, errorMessage } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/cn";
-import { formatDuration, formatMoney, formatPhone, maskCpfCnpjInput, maskPhoneInput, parseMoneyToCents } from "@/lib/format";
+import {
+  formatDuration,
+  formatMoney,
+  formatPhone,
+  maskCpfCnpjInput,
+  maskPhoneInput,
+  parseMoneyToCents,
+} from "@/lib/format";
 import { BUSINESS_TYPES, SERVICE_SUGGESTIONS } from "@/lib/labels";
 import {
   ownerKeys,
@@ -147,32 +155,7 @@ function AccountStep() {
       <Field label="Senha" error={form.formState.errors.password?.message} hint="Mínimo de 8 caracteres">
         {(p) => <Input {...p} type="password" autoComplete="new-password" {...form.register("password")} />}
       </Field>
-      <div className="flex flex-col gap-1.5">
-        <label className="flex min-h-11 cursor-pointer items-start gap-2.5 text-[13px] leading-snug text-ink-2">
-          <input
-            type="checkbox"
-            aria-invalid={Boolean(form.formState.errors.acceptedTerms)}
-            className="mt-0.5 size-5 shrink-0 accent-[oklch(0.5_0.09_210)]"
-            {...form.register("acceptedTerms")}
-          />
-          <span>
-            Li e concordo com os{" "}
-            <Link href="/termos" target="_blank" className="font-bold text-ink underline">
-              Termos de Uso
-            </Link>{" "}
-            e a{" "}
-            <Link href="/privacidade" target="_blank" className="font-bold text-ink underline">
-              Política de Privacidade
-            </Link>
-            .
-          </span>
-        </label>
-        {form.formState.errors.acceptedTerms ? (
-          <p role="alert" className="text-[13px] font-medium text-danger">
-            {form.formState.errors.acceptedTerms.message}
-          </p>
-        ) : null}
-      </div>
+      <TermsCheckbox field={form.register("acceptedTerms")} error={form.formState.errors.acceptedTerms?.message} />
       <Button type="submit" size="lg" loading={form.formState.isSubmitting}>
         Criar conta
       </Button>

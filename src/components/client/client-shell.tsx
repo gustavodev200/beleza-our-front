@@ -64,7 +64,7 @@ export function ClientShell({ children, city }: { children: React.ReactNode; cit
       href: "/profile",
       label: "Perfil",
       icon: "person",
-      match: (p: string) => p.startsWith("/profile") || p.startsWith("/sign-in"),
+      match: (p: string) => p.startsWith("/profile") || p.startsWith("/sign-in") || p.startsWith("/sign-up"),
     },
   ];
 
