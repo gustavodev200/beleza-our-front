@@ -77,9 +77,17 @@ function Confirmation({ id }: { id: string }) {
           {pending ? "Pedido enviado!" : "Horário confirmado!"}
         </h1>
         <p className="mt-2 mb-0 text-sm text-muted">
-          {pending
-            ? "O estabelecimento vai confirmar seu horário. Você recebe o aviso no WhatsApp."
-            : `Enviamos os detalhes para o WhatsApp ${formatPhone(me?.phoneNumber)}.`}
+          {pending ? (
+            <>
+              O estabelecimento vai confirmar seu horário. Você recebe o aviso nas{" "}
+              <Link href="/notifications" className="font-semibold text-ink-2 underline">
+                notificações
+              </Link>
+              .
+            </>
+          ) : (
+            `Enviamos os detalhes para o WhatsApp ${formatPhone(me?.phoneNumber)}.`
+          )}
         </p>
       </div>
       <dl className="m-0 flex w-full flex-col gap-2.5 rounded-[14px] bg-bg p-4 text-left text-sm">
