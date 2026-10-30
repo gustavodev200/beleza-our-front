@@ -26,11 +26,10 @@ import {
   weekdayShort,
 } from "@/lib/format";
 import { BUSINESS_TYPE_LABEL } from "@/lib/labels";
-import { nameSchema, otpSchema, phoneSchema } from "@/lib/schemas";
+import { nameSchema, phoneSchema } from "@/lib/schemas";
 import { meKey, useMe } from "@/lib/session";
 import { bookingDays, buildTimeCells } from "@/lib/slots";
 import type { Availability, BusinessProfile, ClientAppointment } from "@/lib/types";
-import { useOtp } from "@/lib/use-otp";
 
 const ANY = "any";
 
@@ -105,7 +104,6 @@ export function BookingFlow({
   const router = useRouter();
   const qc = useQueryClient();
   const { data: me, isPending: meLoading } = useMe();
-  const otp = useOtp();
   const reschedule = mode.kind === "reschedule" ? mode.appointment : null;
 
   const initialService = b.services.find((s) => s.id === (preset.serviceId ?? reschedule?.serviceId)) ?? null;
@@ -126,7 +124,6 @@ export function BookingFlow({
   const [nameInput, setName] = useState<string | null>(null);
   const [phoneInput, setPhone] = useState("");
   const [consentInput, setConsent] = useState<boolean | null>(null);
-  const [code, setCode] = useState("");
   const [touched, setTouched] = useState(false);
   const [slotTaken, setSlotTaken] = useState(false);
 
@@ -173,8 +170,8 @@ export function BookingFlow({
 
   const nameResult = nameSchema.safeParse(name);
   const phoneResult = phoneSchema.safeParse(phone);
-  const needsOtp = !reschedule && !isClient;
-  const otpForThisPhone = phoneResult.success && otp.sentTo === phoneResult.data;
+  // Agendar exige conta (e-mail e senha); o OTP por WhatsApp está fora da tela por ora.
+  const needsAccount = !reschedule && !meLoading && !me;
 
   const missing = !service
     ? "Escolha o serviço"
@@ -182,17 +179,20 @@ export function BookingFlow({
       ? "Escolha um horário livre"
       : reschedule
         ? null
-        : !nameResult.success
-          ? "Informe seu nome"
-          : !phoneResult.success
-            ? "Informe um WhatsApp válido"
-            : !consent
-              ? "Autorize as mensagens no WhatsApp"
-              : needsOtp && !otpForThisPhone
-                ? "Confirme seu WhatsApp com o código"
-                : needsOtp && !otpSchema.safeParse(code).success
-                  ? "Digite o código de 4 números"
-                  : null;
+        : needsAccount
+          ? "Entre ou crie sua conta para agendar"
+          : !nameResult.success
+            ? "Informe seu nome"
+            : !phoneResult.success
+              ? "Informe um WhatsApp válido"
+              : !consent
+                ? "Autorize as mensagens no WhatsApp"
+                : null;
+
+  // Volta para esta mesma tela (com serviço/horário da URL) depois de entrar.
+  const goToAccount = (path: "/sign-in" | "/sign-up") => {
+    router.push(`${path}?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+  };
 
   const onSlotError = (e: unknown) => {
     if (e instanceof ApiError && (e.code === "SLOT_TAKEN" || e.code === "SLOT_UNAVAILABLE")) {
@@ -203,22 +203,12 @@ export function BookingFlow({
       document.getElementById("passo-4")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-    if (e instanceof ApiError && e.code === "PHONE_NOT_VERIFIED") {
-      otp.reset();
-      toast.error("Confirme seu WhatsApp para agendar.");
-      return;
-    }
     toast.error(errorMessage(e));
   };
 
   const book = useMutation({
-    mutationFn: async () => {
-      if (needsOtp) {
-        const ok = await otp.verify(code);
-        if (!ok) throw new Error("otp");
-        await qc.invalidateQueries({ queryKey: meKey });
-      }
-      return api<ClientAppointment>("/appointments", {
+    mutationFn: () =>
+      api<ClientAppointment>("/appointments", {
         method: "POST",
         body: {
           businessId: b.id,
@@ -226,19 +216,18 @@ export function BookingFlow({
           professionalId: professionalId === ANY ? null : professionalId,
           startsAt,
           clientName: nameResult.data,
+          // Conta por e-mail ainda sem telefone: o WhatsApp fica gravado nela.
+          clientPhone: isClient && !me.phoneNumber ? phoneResult.data : undefined,
           whatsappConsent: true,
         },
-      });
-    },
+      }),
     onSuccess: (appt) => {
       void qc.invalidateQueries({ queryKey: ["appointments"] });
       void qc.invalidateQueries({ queryKey: ["notifications"] });
+      void qc.invalidateQueries({ queryKey: meKey });
       router.push(`/appointments/${appt.id}/confirmed`);
     },
-    onError: (e) => {
-      if (e instanceof Error && e.message === "otp") return; // erro já exibido no campo do código
-      onSlotError(e);
-    },
+    onError: onSlotError,
   });
 
   const move = useMutation({
@@ -255,22 +244,15 @@ export function BookingFlow({
     onError: onSlotError,
   });
 
-  const pending = book.isPending || move.isPending || otp.verifying;
+  const pending = book.isPending || move.isPending;
   const submit = () => {
     setTouched(true);
+    if (needsAccount && service && selectedSlot) {
+      document.getElementById("passo-5")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
     if (missing || pending) return;
     if (reschedule) move.mutate();
     else book.mutate();
-  };
-
-  const sendCode = async () => {
-    setTouched(true);
-    if (!phoneResult.success) return;
-    const ok = await otp.send(phoneResult.data);
-    if (ok) {
-      toast(`Código enviado para ${formatPhone(phoneResult.data)}`);
-      setTimeout(() => document.getElementById("otp")?.focus(), 50);
-    }
   };
 
   const proName =
@@ -474,108 +456,75 @@ export function BookingFlow({
             <StepCard n={5} title="Seus dados">
               {otherRole ? (
                 <Notice className="mb-3">
-                  Você está logado como profissional/admin. Para agendar, saia e entre com o WhatsApp da cliente.
+                  Você está logado como profissional/admin. Para agendar, saia e entre com a conta da cliente.
                 </Notice>
               ) : null}
-              <p className="mt-0 mb-3.5 text-[13px] text-muted">
-                Sem cadastro e sem senha — confirmamos seu WhatsApp com um código e a confirmação chega por lá.
-              </p>
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3">
-                <Field
-                  label="Nome"
-                  error={touched && !nameResult.success ? nameResult.error.issues[0].message : undefined}
-                >
-                  {(p) => (
-                    <Input
-                      {...p}
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      autoComplete="name"
-                      maxLength={80}
-                    />
-                  )}
-                </Field>
-                <Field
-                  label="WhatsApp"
-                  error={touched && !phoneResult.success ? phoneResult.error.issues[0].message : undefined}
-                  hint={isClient ? "Número da sua conta" : undefined}
-                >
-                  {(p) => (
-                    <Input
-                      {...p}
-                      value={phone}
-                      onChange={(e) => {
-                        setPhone(maskPhoneInput(e.target.value));
-                        if (otp.sentTo) otp.reset();
-                      }}
-                      inputMode="tel"
-                      autoComplete="tel-national"
-                      placeholder="(62) 99999-0000"
-                      readOnly={isClient}
-                    />
-                  )}
-                </Field>
-              </div>
-              <label className="mt-3.5 flex min-h-11 cursor-pointer items-start gap-2.5 text-[13px] leading-snug text-ink-2">
-                <input
-                  type="checkbox"
-                  checked={consent}
-                  onChange={(e) => setConsent(e.target.checked)}
-                  className="mt-0.5 size-5 shrink-0 accent-[oklch(0.5_0.09_210)]"
-                />
-                Autorizo receber a confirmação, lembretes e avisos deste agendamento pelo WhatsApp.
-              </label>
-
-              {needsOtp && !meLoading ? (
-                <div className="mt-3 flex flex-col gap-2.5 rounded-xl bg-bg p-3.5">
-                  {!otpForThisPhone ? (
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <span className="min-w-[180px] flex-1 text-[13px] text-ink-2">
-                        Enviaremos um código de 4 números para confirmar seu WhatsApp.
-                      </span>
-                      <Button
-                        variant="outline-ink"
-                        size="sm"
-                        onClick={sendCode}
-                        loading={otp.sending}
-                        disabled={!phoneResult.success}
-                      >
-                        Receber código
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <Field label={`Código enviado para ${formatPhone(otp.sentTo)}`} error={otp.error ?? undefined}>
-                        {(p) => (
-                          <Input
-                            {...p}
-                            id="otp"
-                            value={code}
-                            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                            inputMode="numeric"
-                            autoComplete="one-time-code"
-                            placeholder="0000"
-                            className="max-w-[180px] text-center text-2xl tracking-[.5em]"
-                          />
-                        )}
-                      </Field>
-                      <button
-                        type="button"
-                        disabled={otp.cooldown > 0 || otp.sending}
-                        onClick={sendCode}
-                        className="self-start text-[13px] font-semibold text-primary-strong disabled:text-muted"
-                      >
-                        {otp.cooldown > 0 ? `Reenviar código em ${otp.cooldown}s` : "Reenviar código"}
-                      </button>
-                    </>
-                  )}
-                  {!otpForThisPhone && otp.error ? (
-                    <p role="alert" className="m-0 text-[13px] text-danger">
-                      {otp.error}
-                    </p>
-                  ) : null}
+              {meLoading ? (
+                <Skeleton className="h-24 rounded-xl" />
+              ) : needsAccount ? (
+                <div className="flex flex-col gap-3 rounded-xl bg-bg p-3.5">
+                  <p className="m-0 text-[13px] text-ink-2">
+                    Para agendar, entre na sua conta. Leva um minuto para criar uma, e você volta direto para este
+                    horário.
+                  </p>
+                  <div className="flex flex-wrap gap-2.5">
+                    <Button size="sm" onClick={() => goToAccount("/sign-in")}>
+                      Entrar
+                    </Button>
+                    <Button variant="outline-ink" size="sm" onClick={() => goToAccount("/sign-up")}>
+                      Criar conta
+                    </Button>
+                  </div>
                 </div>
-              ) : null}
+              ) : (
+                <>
+                  <p className="mt-0 mb-3.5 text-[13px] text-muted">
+                    A confirmação, os lembretes e os avisos deste agendamento chegam pelo seu WhatsApp.
+                  </p>
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3">
+                    <Field
+                      label="Nome"
+                      error={touched && !nameResult.success ? nameResult.error.issues[0].message : undefined}
+                    >
+                      {(p) => (
+                        <Input
+                          {...p}
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          autoComplete="name"
+                          maxLength={80}
+                        />
+                      )}
+                    </Field>
+                    <Field
+                      label="WhatsApp"
+                      error={touched && !phoneResult.success ? phoneResult.error.issues[0].message : undefined}
+                      hint={isClient && me.phoneNumber ? "Número da sua conta" : "Fica salvo na sua conta"}
+                    >
+                      {(p) => (
+                        <Input
+                          {...p}
+                          value={phone}
+                          onChange={(e) => setPhone(maskPhoneInput(e.target.value))}
+                          inputMode="tel"
+                          autoComplete="tel-national"
+                          placeholder="(62) 99999-0000"
+                          readOnly={Boolean(isClient && me.phoneNumber)}
+                        />
+                      )}
+                    </Field>
+                  </div>
+                  <label className="mt-3.5 flex min-h-11 cursor-pointer items-start gap-2.5 text-[13px] leading-snug text-ink-2">
+                    <input
+                      type="checkbox"
+                      checked={consent}
+                      onChange={(e) => setConsent(e.target.checked)}
+                      className="mt-0.5 size-5 shrink-0 accent-[oklch(0.5_0.09_210)]"
+                    />
+                    Autorizo receber a confirmação, lembretes e avisos deste agendamento pelo WhatsApp.
+                  </label>
+                </>
+              )}
             </StepCard>
           )}
         </div>

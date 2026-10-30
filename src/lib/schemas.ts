@@ -27,10 +27,23 @@ export const totpSchema = z.string().regex(/^\d{6}$/, "Digite os 6 números do c
 export const emailSchema = z.string().trim().toLowerCase().email("E-mail inválido").max(254);
 export const passwordSchema = z.string().min(8, "Use no mínimo 8 caracteres").max(128, "Senha muito longa");
 
-export const ownerSignInSchema = z.object({
+/** Login por e-mail e senha (dono e cliente). */
+export const signInSchema = z.object({
   email: emailSchema,
   password: z.string().min(1, "Informe a senha"),
 });
+
+const acceptedTermsSchema = z.boolean().refine((v) => v, "Aceite os Termos de Uso e a Política de Privacidade");
+
+export const clientSignUpSchema = z
+  .object({
+    name: z.string().trim().min(2, "Informe seu nome completo").max(80, "Nome muito longo"),
+    email: emailSchema,
+    password: passwordSchema,
+    confirm: z.string(),
+    acceptedTerms: acceptedTermsSchema,
+  })
+  .refine((v) => v.password === v.confirm, { message: "As senhas não conferem", path: ["confirm"] });
 
 export const cpfCnpjSchema = z
   .string()
@@ -50,7 +63,7 @@ export const ownerSignUpSchema = z.object({
   email: emailSchema,
   cpfCnpj: cpfCnpjSchema,
   password: passwordSchema,
-  acceptedTerms: z.boolean().refine((v) => v, "Aceite os Termos de Uso e a Política de Privacidade"),
+  acceptedTerms: acceptedTermsSchema,
 });
 
 export const resetPasswordSchema = z
