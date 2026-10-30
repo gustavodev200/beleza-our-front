@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BusinessImage } from "@/components/ui/business-image";
 import { Badge, Rating } from "@/components/ui/controls";
 import { Icon } from "@/components/ui/icon";
+import { cn } from "@/lib/cn";
 import { formatMoney, formatRelativeDay, formatTime, localDate } from "@/lib/format";
 import { BUSINESS_TYPE_LABEL } from "@/lib/labels";
 import type { BusinessCard as Card, NextSlot } from "@/lib/types";
@@ -25,6 +26,37 @@ function badgeOf(b: Card): string | null {
   if (b.isAutonomous) return "Autônoma";
   if (b.isNew) return "Novo";
   return null;
+}
+
+/** Bolinha verde pulsando quando aberto; vermelha parada quando fora do horário ou na pausa. */
+export function OpenStatus({
+  open,
+  feminine,
+  className,
+}: {
+  open: boolean;
+  /** Autônoma: "Aberta"/"Fechada". */
+  feminine?: boolean;
+  className?: string;
+}) {
+  const label = open ? (feminine ? "Aberta" : "Aberto") : feminine ? "Fechada" : "Fechado";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 text-xs font-bold",
+        open ? "text-ok" : "text-danger",
+        className,
+      )}
+    >
+      <span className="relative flex size-2">
+        {open ? (
+          <span className="absolute inline-flex size-full rounded-full bg-ok opacity-60 motion-safe:animate-ping" />
+        ) : null}
+        <span className={cn("relative inline-flex size-2 rounded-full", open ? "bg-ok" : "bg-danger")} />
+      </span>
+      {label}
+    </span>
+  );
 }
 
 /** "Hoje" / "Amanhã" / "Qua, 29/10" — rótulo dos próximos horários. */
@@ -91,7 +123,10 @@ export function FeaturedCard({ business: b, priority }: { business: Card; priori
             {b.name}
           </Link>
         </h3>
-        <div className="text-[13px] text-muted">{BUSINESS_TYPE_LABEL[b.type]}</div>
+        <div className="flex items-center justify-between gap-2 text-[13px] text-muted">
+          {BUSINESS_TYPE_LABEL[b.type]}
+          <OpenStatus open={b.openNow} feminine={b.isAutonomous} />
+        </div>
         <Meta b={b} />
         <div className="relative z-10 mt-1.5">
           <SlotChips business={b} />
@@ -115,7 +150,10 @@ export function CompactCard({ business: b }: { business: Card }) {
         <span className="text-xs text-muted">
           {BUSINESS_TYPE_LABEL[b.type]} · {b.neighborhood}
         </span>
-        <Rating value={b.ratingAvg} count={b.ratingCount} className="text-xs" />
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
+          <Rating value={b.ratingAvg} count={b.ratingCount} className="text-xs" />
+          <OpenStatus open={b.openNow} feminine={b.isAutonomous} />
+        </div>
       </div>
       <Link
         href={bookingHref(b.slug)}
@@ -149,7 +187,10 @@ export function ResultCard({ business: b }: { business: Card }) {
           </h3>
           <FavoriteButton businessId={b.id} variant="plain" className="relative z-10 -mt-2 -mr-2" />
         </div>
-        <div className="text-[13px] text-muted">{BUSINESS_TYPE_LABEL[b.type]}</div>
+        <div className="flex items-center gap-2.5 text-[13px] text-muted">
+          {BUSINESS_TYPE_LABEL[b.type]}
+          <OpenStatus open={b.openNow} feminine={b.isAutonomous} />
+        </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <Meta b={b} />
           {b.minPriceCents !== null ? (

@@ -13,9 +13,12 @@ export interface DayRow {
   open: boolean;
   opensAt: string;
   closesAt: string;
-  hasBreak: boolean;
-  breakStart: string;
-  breakEnd: string;
+  breaks: BreakRow[];
+}
+
+export interface BreakRow {
+  start: string;
+  end: string;
 }
 
 const TIMES = Array.from(
@@ -24,6 +27,19 @@ const TIMES = Array.from(
 );
 // Segunda a domingo, como o dono pensa a semana.
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
+const MAX_BREAKS = 10;
+
+const addMinutes = (hhmm: string, minutes: number) => {
+  const total = Math.min(Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5)) + minutes, 23 * 60 + 30);
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+};
+
+/** Próxima pausa sugerida: almoço na primeira, depois 30 min logo após a última. */
+function suggestBreak(r: DayRow): BreakRow {
+  const last = r.breaks.at(-1);
+  if (!last) return { start: "12:00", end: "13:00" };
+  return { start: last.end, end: addMinutes(last.end, 30) };
+}
 
 export function hoursToRows(hours: OwnerHours[]): DayRow[] {
   const byDay = new Map(hours.map((h) => [h.weekday, h]));
@@ -35,9 +51,7 @@ export function hoursToRows(hours: OwnerHours[]): DayRow[] {
       open: h ? true : fresh && weekday !== 0,
       opensAt: h?.opensAt ?? "09:00",
       closesAt: h?.closesAt ?? "19:00",
-      hasBreak: Boolean(h?.breakStart),
-      breakStart: h?.breakStart ?? "12:00",
-      breakEnd: h?.breakEnd ?? "13:00",
+      breaks: h?.breaks ?? [],
     };
   });
 }
@@ -52,7 +66,7 @@ export function rowsToPayload(rows: DayRow[]) {
         weekday: r.weekday,
         opensAt: r.opensAt,
         closesAt: r.closesAt,
-        ...(r.hasBreak ? { breakStart: r.breakStart, breakEnd: r.breakEnd } : {}),
+        breaks: r.breaks,
       };
       const check = daySchema.safeParse(day);
       if (!check.success) errors[r.weekday] = check.error.issues[0].message;
@@ -124,13 +138,13 @@ export function HoursEditor({
               ...r,
               opensAt: source.opensAt,
               closesAt: source.closesAt,
-              hasBreak: source.hasBreak,
-              breakStart: source.breakStart,
-              breakEnd: source.breakEnd,
+              breaks: source.breaks.map((b) => ({ ...b })),
             }
           : r,
       ),
     );
+  const setBreak = (r: DayRow, index: number, patch: Partial<BreakRow>) =>
+    set(r.weekday, { breaks: r.breaks.map((b, i) => (i === index ? { ...b, ...patch } : b)) });
   const openCount = rows.filter((r) => r.open).length;
 
   return (
@@ -173,40 +187,45 @@ export function HoursEditor({
                     ) : null}
                   </div>
 
-                  {r.hasBreak ? (
-                    <div className="flex flex-col gap-1.5 rounded-xl bg-panel-bg p-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-1.5 text-[13px] font-semibold text-ink-2">
-                          <Icon name="restaurant" size={16} />
-                          Intervalo
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => set(r.weekday, { hasBreak: false })}
-                          className="min-h-9 px-1 text-[13px] font-semibold text-muted hover:text-danger"
-                        >
-                          Remover
-                        </button>
+                  {r.breaks.map((b, i) => {
+                    const label = r.breaks.length > 1 ? `Intervalo ${i + 1}` : "Intervalo";
+                    return (
+                      <div key={i} className="flex flex-col gap-1.5 rounded-xl bg-panel-bg p-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-1.5 text-[13px] font-semibold text-ink-2">
+                            <Icon name={i === 0 ? "restaurant" : "coffee"} size={16} />
+                            {label}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => set(r.weekday, { breaks: r.breaks.filter((_, j) => j !== i) })}
+                            aria-label={`Remover ${label.toLowerCase()} de ${day}`}
+                            className="min-h-9 px-1 text-[13px] font-semibold text-muted hover:text-danger"
+                          >
+                            Remover
+                          </button>
+                        </div>
+                        <TimeRange
+                          from={b.start}
+                          to={b.end}
+                          onFrom={(v) => setBreak(r, i, { start: v })}
+                          onTo={(v) => setBreak(r, i, { end: v })}
+                          fromLabel={`Início do ${label.toLowerCase()} ${short}`}
+                          toLabel={`Fim do ${label.toLowerCase()} ${short}`}
+                        />
                       </div>
-                      <TimeRange
-                        from={r.breakStart}
-                        to={r.breakEnd}
-                        onFrom={(v) => set(r.weekday, { breakStart: v })}
-                        onTo={(v) => set(r.weekday, { breakEnd: v })}
-                        fromLabel={`Início do intervalo ${short}`}
-                        toLabel={`Fim do intervalo ${short}`}
-                      />
-                    </div>
-                  ) : (
+                    );
+                  })}
+                  {r.breaks.length < MAX_BREAKS ? (
                     <button
                       type="button"
-                      onClick={() => set(r.weekday, { hasBreak: true })}
+                      onClick={() => set(r.weekday, { breaks: [...r.breaks, suggestBreak(r)] })}
                       className="inline-flex min-h-9 items-center gap-1 self-start text-[13px] font-bold text-primary-strong"
                     >
                       <Icon name="add" size={18} />
-                      Adicionar intervalo
+                      {r.breaks.length ? "Adicionar outro intervalo" : "Adicionar intervalo"}
                     </button>
-                  )}
+                  ) : null}
 
                   {errors[r.weekday] ? (
                     <p role="alert" className="m-0 text-[13px] font-medium text-danger">

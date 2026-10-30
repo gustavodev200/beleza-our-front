@@ -11,15 +11,13 @@ describe("schemas", () => {
     expect(serviceFormSchema.safeParse({ ...base, durationMinutes: 45 }).success).toBe(true);
     expect(serviceFormSchema.safeParse({ ...base, durationMinutes: 47 }).success).toBe(false);
   });
-  it("pausa dentro do expediente", () => {
-    expect(
-      daySchema.safeParse({ weekday: 1, opensAt: "09:00", closesAt: "18:00", breakStart: "12:00", breakEnd: "13:00" })
-        .success,
-    ).toBe(true);
-    expect(
-      daySchema.safeParse({ weekday: 1, opensAt: "09:00", closesAt: "18:00", breakStart: "08:00", breakEnd: "13:00" })
-        .success,
-    ).toBe(false);
+  it("pausas dentro do expediente e sem sobreposição", () => {
+    const day = (breaks: { start: string; end: string }[]) =>
+      daySchema.safeParse({ weekday: 1, opensAt: "09:00", closesAt: "18:00", breaks }).success;
+    expect(day([])).toBe(true);
+    expect(day([{ start: "12:00", end: "13:00" }, { start: "15:00", end: "15:30" }])).toBe(true);
+    expect(day([{ start: "08:00", end: "13:00" }])).toBe(false);
+    expect(day([{ start: "12:00", end: "13:00" }, { start: "12:30", end: "14:00" }])).toBe(false);
   });
   it("cadastro da cliente exige senhas iguais e aceite dos termos", () => {
     const base = {

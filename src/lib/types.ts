@@ -53,6 +53,8 @@ export interface BusinessCard {
   longitude: number | null;
   isNew: boolean;
   isAutonomous: boolean;
+  /** Dentro do expediente de hoje e fora das pausas (fuso SP). */
+  openNow: boolean;
   distanceKm: number | null;
   nextSlots: NextSlot[];
 }
@@ -61,8 +63,8 @@ export interface PublicHours {
   weekday: number;
   opensAt: number;
   closesAt: number;
-  breakStart: number | null;
-  breakEnd: number | null;
+  /** Pausas em minutos desde 00:00, ordenadas. */
+  breaks: { start: number; end: number }[];
 }
 
 export interface PublicService {
@@ -100,7 +102,6 @@ export interface BusinessProfile extends Omit<BusinessCard, "nextSlots"> {
   hours: PublicHours[];
   services: PublicService[];
   professionals: PublicProfessional[];
-  openNow: boolean;
   closedToday: boolean;
   nextSlot: NextSlot | null;
   latestReviews: Review[];
@@ -203,8 +204,7 @@ export interface OwnerHours {
   weekday: number;
   opensAt: string;
   closesAt: string;
-  breakStart: string | null;
-  breakEnd: string | null;
+  breaks: { start: string; end: string }[];
 }
 
 export interface OwnerBusiness {

@@ -11,7 +11,7 @@ export interface TimeCell {
 
 /**
  * Grade de horários do dia para exibição: todos os inícios estruturais
- * (expediente, fora da pausa, cabendo a duração, no futuro) marcados como
+ * (expediente, fora das pausas, cabendo a duração, no futuro) marcados como
  * livres quando a API os devolveu. A API é quem decide o que está livre;
  * a grade só serve para mostrar os ocupados riscados (§4.4).
  */
@@ -28,8 +28,7 @@ export function buildTimeCells(
   const cells: TimeCell[] = [];
   for (let start = hours.opensAt; start + durationMinutes <= hours.closesAt; start += SLOT_STEP_MINUTES) {
     const end = start + durationMinutes;
-    if (hours.breakStart !== null && hours.breakEnd !== null && start < hours.breakEnd && end > hours.breakStart)
-      continue;
+    if (hours.breaks.some((b) => start < b.end && end > b.start)) continue;
     if (start <= nowMinutes) continue;
     const time = `${String(Math.floor(start / 60)).padStart(2, "0")}:${String(start % 60).padStart(2, "0")}`;
     cells.push({ time, slot: free.get(time) ?? null });

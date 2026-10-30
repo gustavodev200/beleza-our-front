@@ -108,20 +108,16 @@ export const daySchema = z
     weekday: z.number().int().min(0).max(6),
     opensAt: timeSchema,
     closesAt: timeSchema,
-    breakStart: timeSchema.optional(),
-    breakEnd: timeSchema.optional(),
+    breaks: z.array(z.object({ start: timeSchema, end: timeSchema })).max(10, "Máximo de 10 pausas por dia"),
   })
   .superRefine((d, ctx) => {
     if (d.opensAt >= d.closesAt) ctx.addIssue({ code: "custom", message: "Abertura deve ser antes do fechamento" });
-    if (Boolean(d.breakStart) !== Boolean(d.breakEnd))
-      ctx.addIssue({ code: "custom", message: "Informe início e fim da pausa" });
-    if (
-      d.breakStart &&
-      d.breakEnd &&
-      !(d.opensAt <= d.breakStart && d.breakStart < d.breakEnd && d.breakEnd <= d.closesAt)
-    ) {
+    // "HH:MM" compara certo como texto.
+    const breaks = [...d.breaks].sort((a, b) => a.start.localeCompare(b.start));
+    if (breaks.some((b) => !(d.opensAt <= b.start && b.start < b.end && b.end <= d.closesAt)))
       ctx.addIssue({ code: "custom", message: "Pausa deve estar dentro do expediente" });
-    }
+    else if (breaks.some((b, i) => i > 0 && b.start < breaks[i - 1].end))
+      ctx.addIssue({ code: "custom", message: "Pausas não podem se sobrepor" });
   });
 
 export const reviewSchema = z.object({

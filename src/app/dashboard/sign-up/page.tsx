@@ -581,7 +581,7 @@ function BusinessWizard({ business, ownerName }: { business: OwnerBusiness | nul
 
       {step === 4 ? (
         <>
-          <StepTitle title="Quando você atende?" sub="Dias, abertura, fechamento e pausa de almoço." />
+          <StepTitle title="Quando você atende?" sub="Dias, abertura, fechamento e pausas (almoço, café...)." />
           <HoursEditor rows={rows} onChange={setRows} errors={hourErrors} />
         </>
       ) : null}

@@ -76,13 +76,14 @@ export default function AgendaCalendar({
     () =>
       (data?.hours ?? []).flatMap((h) => {
         const days = [h.weekday];
-        if (h.breakStart === null || h.breakEnd === null) {
-          return [{ daysOfWeek: days, startTime: minutesToHHMM(h.opensAt), endTime: minutesToHHMM(h.closesAt) }];
+        // Trechos de expediente entre as pausas.
+        const edges = [h.opensAt, ...h.breaks.flatMap((b) => [b.start, b.end]), h.closesAt];
+        const spans = [];
+        for (let i = 0; i < edges.length; i += 2) {
+          if (edges[i] < edges[i + 1])
+            spans.push({ daysOfWeek: days, startTime: minutesToHHMM(edges[i]), endTime: minutesToHHMM(edges[i + 1]) });
         }
-        return [
-          { daysOfWeek: days, startTime: minutesToHHMM(h.opensAt), endTime: minutesToHHMM(h.breakStart) },
-          { daysOfWeek: days, startTime: minutesToHHMM(h.breakEnd), endTime: minutesToHHMM(h.closesAt) },
-        ];
+        return spans;
       }),
     [data?.hours],
   );
@@ -90,15 +91,16 @@ export default function AgendaCalendar({
   const events = useMemo<EventInput[]>(() => {
     const list: EventInput[] = [];
     for (const h of data?.hours ?? []) {
-      if (h.breakStart === null || h.breakEnd === null) continue;
-      list.push({
-        id: `break-${h.weekday}`,
-        display: "background",
-        daysOfWeek: [h.weekday],
-        startTime: HH(h.breakStart),
-        endTime: HH(h.breakEnd),
-        extendedProps: { kind: "break" } satisfies EventKind,
-      });
+      h.breaks.forEach((b, i) =>
+        list.push({
+          id: `break-${h.weekday}-${i}`,
+          display: "background",
+          daysOfWeek: [h.weekday],
+          startTime: HH(b.start),
+          endTime: HH(b.end),
+          extendedProps: { kind: "break" } satisfies EventKind,
+        }),
+      );
     }
     for (const a of data?.appointments ?? []) {
       if (hidden.has(a.professional.id) || a.status === "CANCELED") continue;

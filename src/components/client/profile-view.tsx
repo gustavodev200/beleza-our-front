@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { bookingHref } from "@/components/client/business-cards";
+import { bookingHref, OpenStatus } from "@/components/client/business-cards";
 import { FavoriteButton } from "@/components/client/favorite-button";
 import { BusinessImage } from "@/components/ui/business-image";
 import { buttonVariants } from "@/components/ui/button";
@@ -38,10 +38,11 @@ function hoursLines(hours: PublicHours[]): string[] {
   return [1, 2, 3, 4, 5, 6, 0].map((wd) => {
     const h = byDay.get(wd);
     if (!h) return `${WEEKDAY_SHORT[wd]} · Fechado`;
-    const brk =
-      h.breakStart !== null && h.breakEnd !== null
-        ? ` (pausa ${minutesToHHMM(h.breakStart)}–${minutesToHHMM(h.breakEnd)})`
-        : "";
+    const brk = h.breaks.length
+      ? ` (${h.breaks.length > 1 ? "pausas" : "pausa"} ${h.breaks
+          .map((p) => `${minutesToHHMM(p.start)}–${minutesToHHMM(p.end)}`)
+          .join(", ")})`
+      : "";
     return `${WEEKDAY_SHORT[wd]} · ${minutesToHHMM(h.opensAt)}–${minutesToHHMM(h.closesAt)}${brk}`;
   });
 }
@@ -129,11 +130,7 @@ export function ProfileView({ profile: b }: { profile: BusinessProfile }) {
   const [tab, setTab] = useState<Tab>("servicos");
   const minPrice = b.services.length ? Math.min(...b.services.map((s) => s.priceCents)) : null;
   const closeAt = closesTodayAt(b.hours);
-  const openLabel = b.closedToday
-    ? "Fechado hoje"
-    : b.openNow
-      ? `Aberto agora${closeAt ? ` · até ${closeAt}` : ""}`
-      : "Fechado agora";
+  const openDetail = b.closedToday ? "hoje" : b.openNow && closeAt ? `até ${closeAt}` : null;
   const next = b.nextSlot;
   const nextLabel = next
     ? `${formatRelativeDay(localDate(next.startsAt))}, ${formatTime(next.startsAt)}`
@@ -195,7 +192,10 @@ export function ProfileView({ profile: b }: { profile: BusinessProfile }) {
               <span>{BUSINESS_TYPE_LABEL[b.type]}</span>
               <Rating value={b.ratingAvg} count={b.ratingCount} className="text-sm" />
               <span>{b.neighborhood}</span>
-              <span className={b.openNow ? "font-semibold text-ok" : "font-semibold text-muted"}>{openLabel}</span>
+              <span className="inline-flex items-center gap-1.5">
+                <OpenStatus open={b.openNow} feminine={b.isAutonomous} className="text-sm" />
+                {openDetail ? <span className="text-muted">{openDetail}</span> : null}
+              </span>
             </div>
           </div>
         </div>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bookingDays, buildTimeCells } from "./slots";
 
-const hours = { weekday: 3, opensAt: 9 * 60, closesAt: 11 * 60, breakStart: 10 * 60, breakEnd: 10 * 60 + 30 };
+const hours = { weekday: 3, opensAt: 9 * 60, closesAt: 11 * 60, breaks: [{ start: 10 * 60, end: 10 * 60 + 30 }] };
 
 describe("buildTimeCells", () => {
   it("marca livres e ocupados, pula a pausa e respeita a duração", () => {
