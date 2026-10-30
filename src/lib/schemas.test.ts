@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daySchema, exploreParamsSchema, phoneSchema, serviceFormSchema } from "./schemas";
+import { clientSignUpSchema, daySchema, exploreParamsSchema, phoneSchema, serviceFormSchema } from "./schemas";
 
 describe("schemas", () => {
   it("telefone vira E.164", () => {
@@ -20,6 +20,21 @@ describe("schemas", () => {
       daySchema.safeParse({ weekday: 1, opensAt: "09:00", closesAt: "18:00", breakStart: "08:00", breakEnd: "13:00" })
         .success,
     ).toBe(false);
+  });
+  it("cadastro da cliente exige senhas iguais e aceite dos termos", () => {
+    const base = {
+      name: "Maria Silva",
+      email: "Maria@Exemplo.com ",
+      password: "senha-forte-1",
+      confirm: "senha-forte-1",
+      acceptedTerms: true,
+    };
+    expect(clientSignUpSchema.parse(base).email).toBe("maria@exemplo.com");
+    const mismatch = clientSignUpSchema.safeParse({ ...base, confirm: "outra-senha" });
+    expect(mismatch.success).toBe(false);
+    expect(mismatch.error?.issues[0].path).toEqual(["confirm"]);
+    expect(clientSignUpSchema.safeParse({ ...base, acceptedTerms: false }).success).toBe(false);
+    expect(clientSignUpSchema.safeParse({ ...base, password: "curta", confirm: "curta" }).success).toBe(false);
   });
   it("descarta query string inválida em vez de quebrar", () => {
     expect(exploreParamsSchema.parse({ category: "x", sort: "hack", page: "-1", q: "unha" })).toEqual({

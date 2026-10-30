@@ -1,183 +1,132 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Segmented } from "@/components/ui/controls";
+import type { z } from "zod";
+import { ClientAuthCard } from "@/components/client/client-auth-card";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form";
-import { Icon } from "@/components/ui/icon";
 import { Notice } from "@/components/ui/states";
 import { api } from "@/lib/api";
-import { formatPhone, maskPhoneInput } from "@/lib/format";
+import { authClient } from "@/lib/auth-client";
 import { safeRedirect } from "@/lib/safe-redirect";
-import { nameSchema, otpSchema, phoneSchema } from "@/lib/schemas";
+import { signInSchema } from "@/lib/schemas";
 import { meKey } from "@/lib/session";
 import type { Me } from "@/lib/types";
-import { useOtp } from "@/lib/use-otp";
+import { authErrorMessage } from "@/lib/use-otp";
 
 const REASONS: Record<string, string> = {
   blocked: "Sua conta está bloqueada. Fale com o suporte do belezaOur.",
-  role: "Esta área é da conta de cliente. Entre com seu WhatsApp.",
+  role: "Esta área é da conta de cliente. Entre com seu e-mail e senha.",
+  "password-reset": "Senha redefinida. Entre com a nova senha.",
 };
 
-function LoginForm() {
+function SignInForm() {
   const params = useSearchParams();
   const next = safeRedirect(params.get("next"), "/appointments");
-  const reason = REASONS[params.get("reason") ?? ""];
+  const reasonKey = params.get("reason") ?? "";
+  const reason = REASONS[reasonKey];
   const router = useRouter();
   const qc = useQueryClient();
-  const otp = useOtp();
-  const [tab, setTab] = useState<"entrar" | "criar">("entrar");
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [code, setCode] = useState("");
-  const [errors, setErrors] = useState<{ name?: string; phone?: string; code?: string }>({});
-  const isSignup = tab === "criar";
+  const [error, setError] = useState<string | null>(null);
+  const [unverified, setUnverified] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const form = useForm<z.infer<typeof signInSchema>>({ resolver: zodResolver(signInSchema) });
+  const withNext = (path: string) => (next === "/appointments" ? path : `${path}?next=${encodeURIComponent(next)}`);
 
-  const requestCode = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    const n = nameSchema.safeParse(name);
-    const p = phoneSchema.safeParse(phone);
-    const errs = {
-      name: isSignup && !n.success ? n.error.issues[0].message : undefined,
-      phone: p.success ? undefined : p.error.issues[0].message,
-    };
-    setErrors(errs);
-    if (errs.name || errs.phone || !p.success) return;
-    if (await otp.send(p.data)) {
-      setCode("");
-      setTimeout(() => document.getElementById("codigo")?.focus(), 50);
-    }
-  };
-
-  const confirm = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const c = otpSchema.safeParse(code);
-    if (!c.success) {
-      setErrors({ code: c.error.issues[0].message });
+  const onSubmit = form.handleSubmit(async (values) => {
+    setError(null);
+    setUnverified(null);
+    const { data, error: err } = await authClient.signIn.email({ email: values.email, password: values.password });
+    if (err) {
+      if (err.code === "EMAIL_NOT_VERIFIED") {
+        setUnverified(values.email);
+        return;
+      }
+      setError(err.status === 401 ? "E-mail ou senha incorretos." : authErrorMessage(err, "Não foi possível entrar."));
       return;
     }
-    setErrors({});
-    if (!(await otp.verify(c.data))) return;
-    const me = await qc.fetchQuery({ queryKey: meKey, queryFn: () => api<Me>("/me") });
-    if (me.role !== "CLIENT") {
-      toast("Esta conta não é de cliente.");
-    } else if (isSignup && nameSchema.safeParse(name).success && me.name !== name.trim()) {
-      await api("/me", { method: "PATCH", body: { name: name.trim() } }).catch(() => undefined);
-      void qc.invalidateQueries({ queryKey: meKey });
+    // Só admin tem 2FA; o login dele é em outra área.
+    if (data && "twoFactorRedirect" in data && data.twoFactorRedirect) {
+      setError("Admins entram pela área administrativa.");
+      return;
     }
-    toast(isSignup ? "Conta criada! Bem-vinda ao belezaOur" : "Você entrou");
+    const me = await qc.fetchQuery({ queryKey: meKey, queryFn: () => api<Me>("/me"), staleTime: 0 });
+    if (me.role !== "CLIENT") {
+      await authClient.signOut();
+      qc.clear();
+      setError(
+        me.role === "BUSINESS_OWNER"
+          ? "Esta é uma conta de estabelecimento. Entre pelo painel do dono."
+          : "Esta conta não é de cliente.",
+      );
+      return;
+    }
+    toast(`Olá, ${me.name.split(" ")[0]}!`);
     router.replace(next);
     router.refresh();
+  });
+
+  const resend = async () => {
+    if (!unverified) return;
+    setResending(true);
+    const { error: err } = await authClient.sendVerificationEmail({
+      email: unverified,
+      callbackURL: `${window.location.origin}${next}`,
+    });
+    setResending(false);
+    if (err) toast.error(authErrorMessage(err, "Não foi possível reenviar."));
+    else toast("Link de confirmação reenviado. Confira seu e-mail.");
   };
 
   return (
-    <div className="flex flex-col gap-4 rounded-3xl border border-line bg-surface p-6 sm:p-8">
-      <Icon name="spa" size={34} className="text-primary-strong" />
-      <Segmented
-        stretch
-        value={tab}
-        onChange={(v) => {
-          setTab(v);
-          otp.reset();
-          setErrors({});
-        }}
-        options={[
-          { value: "entrar", label: "Entrar" },
-          { value: "criar", label: "Criar conta" },
-        ]}
-      />
-      <h1 className="m-0 text-[30px] leading-[1.05] font-bold sm:text-[34px]">
-        {isSignup ? "Crie sua conta" : "Entre com seu WhatsApp"}
-      </h1>
-      {reason ? <Notice tone="danger">{reason}</Notice> : null}
-
-      {!otp.sentTo ? (
-        <form onSubmit={requestCode} className="flex flex-col gap-3.5" noValidate>
-          <div className="text-sm text-muted">
-            {isSignup ? "Só nome e WhatsApp — sem senha." : "Enviamos um código de 4 números para o seu WhatsApp."}
-          </div>
-          {isSignup ? (
-            <Field label="Seu nome" error={errors.name}>
-              {(p) => (
-                <Input
-                  {...p}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  autoComplete="name"
-                  maxLength={80}
-                />
-              )}
-            </Field>
-          ) : null}
-          <Field label="WhatsApp" error={errors.phone ?? otp.error ?? undefined}>
-            {(p) => (
-              <Input
-                {...p}
-                value={phone}
-                onChange={(e) => setPhone(maskPhoneInput(e.target.value))}
-                placeholder="(62) 99999-0000"
-                inputMode="tel"
-                autoComplete="tel-national"
-              />
-            )}
-          </Field>
-          <Button type="submit" loading={otp.sending}>
-            Receber código
-          </Button>
-        </form>
-      ) : (
-        <form onSubmit={confirm} className="flex flex-col gap-3.5" noValidate>
-          <Field
-            label={`Digite o código enviado para ${formatPhone(otp.sentTo)}`}
-            error={errors.code ?? otp.error ?? undefined}
-          >
-            {(p) => (
-              <Input
-                {...p}
-                id="codigo"
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                placeholder="0000"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                className="text-center text-[28px] tracking-[.5em]"
-              />
-            )}
-          </Field>
-          <Button type="submit" loading={otp.verifying}>
-            {isSignup ? "Criar conta" : "Entrar"}
-          </Button>
-          <div className="flex items-center justify-between text-[13px] font-semibold">
-            <button type="button" className="min-h-10" onClick={() => otp.reset()}>
-              Trocar número
-            </button>
-            <button
-              type="button"
-              className="min-h-10 text-primary-strong disabled:text-muted"
-              disabled={otp.cooldown > 0}
-              onClick={() => requestCode()}
-            >
-              {otp.cooldown > 0 ? `Reenviar em ${otp.cooldown}s` : "Reenviar código"}
-            </button>
-          </div>
-        </form>
-      )}
-      <div className="text-xs text-subtle">
-        Você também pode agendar sem conta — ela é criada automaticamente no primeiro agendamento.
+    <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+      {reason ? <Notice tone={reasonKey === "password-reset" ? "ok" : "danger"}>{reason}</Notice> : null}
+      {error ? <Notice tone="danger">{error}</Notice> : null}
+      {unverified ? (
+        <Notice>
+          Confirme seu e-mail para entrar. Enviamos um link para {unverified}.{" "}
+          <button type="button" onClick={resend} disabled={resending} className="font-bold underline">
+            Reenviar link
+          </button>
+        </Notice>
+      ) : null}
+      <Field label="E-mail" error={form.formState.errors.email?.message}>
+        {(p) => <Input {...p} type="email" autoComplete="email" {...form.register("email")} />}
+      </Field>
+      <Field label="Senha" error={form.formState.errors.password?.message}>
+        {(p) => <Input {...p} type="password" autoComplete="current-password" {...form.register("password")} />}
+      </Field>
+      <Button type="submit" loading={form.formState.isSubmitting} size="lg">
+        Entrar
+      </Button>
+      <Link href="/forgot-password" className="self-start text-sm font-semibold text-primary-strong">
+        Esqueci minha senha
+      </Link>
+      <div className="mt-2 border-t border-line pt-4 text-sm text-muted">
+        Ainda não tem conta?
+        <Link
+          href={withNext("/sign-up")}
+          className={buttonVariants({ variant: "outline-ink", block: true, className: "mt-2" })}
+        >
+          Criar conta
+        </Link>
       </div>
-    </div>
+    </form>
   );
 }
 
-export default function ClientLoginPage() {
+export default function ClientSignInPage() {
   return (
-    <div className="mx-auto max-w-[440px] px-4 pt-8 sm:pt-14">
+    <ClientAuthCard title="Entrar" sub="Acesse seus agendamentos e favoritos.">
       <Suspense>
-        <LoginForm />
+        <SignInForm />
       </Suspense>
-    </div>
+    </ClientAuthCard>
   );
 }
