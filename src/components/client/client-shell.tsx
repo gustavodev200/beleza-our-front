@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { CalendarDays, Heart, House, Search, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
@@ -12,10 +13,10 @@ import { initials } from "@/lib/format";
 import { useMe } from "@/lib/session";
 
 const NAV = [
-  { href: "/", label: "Início", icon: "home", match: (p: string) => p === "/" },
-  { href: "/explore", label: "Explorar", icon: "search", match: (p: string) => p.startsWith("/explore") },
-  { href: "/appointments", label: "Agendamentos", icon: "event", match: (p: string) => p.startsWith("/appointments") },
-  { href: "/favorites", label: "Favoritos", icon: "favorite", match: (p: string) => p.startsWith("/favorites") },
+  { href: "/", label: "Início", icon: House, match: (p: string) => p === "/" },
+  { href: "/explore", label: "Explorar", icon: Search, match: (p: string) => p.startsWith("/explore") },
+  { href: "/appointments", label: "Agendamentos", icon: CalendarDays, match: (p: string) => p.startsWith("/appointments") },
+  { href: "/favorites", label: "Favoritos", icon: Heart, match: (p: string) => p.startsWith("/favorites") },
 ];
 
 export function useUnreadCount(enabled: boolean) {
@@ -63,7 +64,7 @@ export function ClientShell({ children, city }: { children: React.ReactNode; cit
     {
       href: "/profile",
       label: "Perfil",
-      icon: "person",
+      icon: User,
       match: (p: string) => p.startsWith("/profile") || p.startsWith("/sign-in") || p.startsWith("/sign-up"),
     },
   ];
@@ -168,7 +169,7 @@ export function ClientShell({ children, city }: { children: React.ReactNode; cit
                 active ? "font-bold text-ink" : "font-medium text-subtle",
               )}
             >
-              <Icon name={t.icon} size={24} fill={active} />
+              <t.icon size={24} strokeWidth={active ? 2.5 : 2} aria-hidden />
               {t.label}
             </Link>
           );

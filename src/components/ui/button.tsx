@@ -38,7 +38,8 @@ type Variants = VariantProps<typeof buttonVariants>;
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, Variants {
   loading?: boolean;
-  icon?: string;
+  /** Nome do Material Symbol ou um ícone pronto (ex.: lucide-react). */
+  icon?: string | React.ReactNode;
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
@@ -56,9 +57,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     >
       {loading ? (
         <Icon name="progress_activity" size={18} className="animate-spin" />
-      ) : icon ? (
+      ) : typeof icon === "string" ? (
         <Icon name={icon} size={18} />
-      ) : null}
+      ) : (
+        icon
+      )}
       {children}
     </button>
   );

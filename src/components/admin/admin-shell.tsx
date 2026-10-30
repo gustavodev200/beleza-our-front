@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Crown, LayoutDashboard, Settings, Shapes, ShieldCheck, Store, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -12,13 +13,13 @@ import { RequireRole, useMe, useSignOut } from "@/lib/session";
 import type { AdminBusinessRow, Page } from "@/lib/types";
 
 const NAV = [
-  { href: "/admin", label: "Dashboard", icon: "space_dashboard", exact: true },
-  { href: "/admin/approvals", label: "Aprovações", icon: "verified_user" },
-  { href: "/admin/businesses", label: "Estabelecimentos", icon: "storefront" },
-  { href: "/admin/users", label: "Usuários", icon: "group" },
-  { href: "/admin/categories", label: "Categorias", icon: "category" },
-  { href: "/admin/plans", label: "Planos", icon: "workspace_premium" },
-  { href: "/admin/settings", label: "Configurações", icon: "settings" },
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/admin/approvals", label: "Aprovações", icon: ShieldCheck },
+  { href: "/admin/businesses", label: "Estabelecimentos", icon: Store },
+  { href: "/admin/users", label: "Usuários", icon: Users },
+  { href: "/admin/categories", label: "Categorias", icon: Shapes },
+  { href: "/admin/plans", label: "Planos", icon: Crown },
+  { href: "/admin/settings", label: "Configurações", icon: Settings },
 ];
 
 export const pendingKey = ["admin", "businesses", "PENDING"] as const; // prefixo de adminKeys.businesses
@@ -71,7 +72,7 @@ function Shell({ children }: { children: React.ReactNode }) {
                   on ? "bg-primary text-white" : "hover:bg-white/5",
                 )}
               >
-                <Icon name={n.icon} size={20} />
+                <n.icon size={20} aria-hidden />
                 <span className="flex-1">{n.label}</span>
                 {n.href === "/admin/approvals" && badge > 0 ? (
                   <span className="rounded-full bg-star px-[7px] py-px text-[11px] font-extrabold text-ink">

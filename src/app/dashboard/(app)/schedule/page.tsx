@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight, Coffee, Plus } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useRef, useState, useSyncExternalStore } from "react";
@@ -9,7 +10,6 @@ import { AppointmentDrawer } from "@/components/owner/appointment-drawer";
 import { usePanel } from "@/components/owner/panel-shell";
 import { Button } from "@/components/ui/button";
 import { PageTitle, Segmented, Toggle } from "@/components/ui/controls";
-import { Icon } from "@/components/ui/icon";
 import { ErrorState, Skeleton } from "@/components/ui/states";
 import { api, errorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -133,10 +133,10 @@ function AgendaView() {
         actions={
           <>
             <Button variant="outline" size="icon-sm" onClick={() => shift(-1)} aria-label="Anterior">
-              <Icon name="chevron_left" size={20} />
+              <ChevronLeft size={20} aria-hidden />
             </Button>
             <Button variant="outline" size="icon-sm" onClick={() => shift(1)} aria-label="Próximo">
-              <Icon name="chevron_right" size={20} />
+              <ChevronRight size={20} aria-hidden />
             </Button>
             <Button variant="outline" size="sm" onClick={() => setAnchor(today)}>
               Hoje
@@ -155,7 +155,7 @@ function AgendaView() {
             <Button
               variant="outline"
               size="sm"
-              icon="coffee"
+              icon={<Coffee size={18} aria-hidden />}
               onClick={() => openBlock({ date: anchor >= today ? anchor : today })}
             >
               Pausa
@@ -163,7 +163,7 @@ function AgendaView() {
             <Button
               variant="primary"
               size="sm"
-              icon="add"
+              icon={<Plus size={18} aria-hidden />}
               onClick={() => openNew({ date: anchor >= today ? anchor : today })}
             >
               Novo

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { CalendarDays, Clock, Ellipsis, LayoutDashboard, Scissors, Store, Users, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
@@ -18,12 +19,12 @@ import { BlockModal } from "./block-modal";
 import { CounterModal } from "./counter-modal";
 
 const NAV = [
-  { href: "/dashboard", label: "Visão geral", short: "Início", icon: "space_dashboard", exact: true },
-  { href: "/dashboard/schedule", label: "Agenda", short: "Agenda", icon: "calendar_month" },
-  { href: "/dashboard/services", label: "Serviços", short: "Serviços", icon: "design_services" },
-  { href: "/dashboard/professionals", label: "Profissionais", short: "Equipe", icon: "groups" },
-  { href: "/dashboard/hours", label: "Horários", short: "Horários", icon: "schedule" },
-  { href: "/dashboard/profile", label: "Perfil público", short: "Perfil", icon: "storefront" },
+  { href: "/dashboard", label: "Visão geral", short: "Início", icon: LayoutDashboard, exact: true },
+  { href: "/dashboard/schedule", label: "Agenda", short: "Agenda", icon: CalendarDays },
+  { href: "/dashboard/services", label: "Serviços", short: "Serviços", icon: Scissors },
+  { href: "/dashboard/professionals", label: "Profissionais", short: "Equipe", icon: Users },
+  { href: "/dashboard/hours", label: "Horários", short: "Horários", icon: Clock },
+  { href: "/dashboard/profile", label: "Perfil público", short: "Perfil", icon: Store },
 ];
 // Barra inferior do celular: 4 itens fixos + "Mais" com o restante.
 const MOBILE_MAIN = NAV.slice(0, 4);
@@ -110,7 +111,7 @@ function Shell({ children }: { children: React.ReactNode }) {
                     on ? "bg-primary text-white" : "hover:bg-white/5",
                   )}
                 >
-                  <Icon name={n.icon} size={20} />
+                  <n.icon size={20} aria-hidden />
                   <span className="flex-1">{n.label}</span>
                   {n.exact && pending > 0 ? (
                     <span className="rounded-full bg-star px-[7px] py-px text-[11px] font-extrabold text-ink">
@@ -206,7 +207,7 @@ function Shell({ children }: { children: React.ReactNode }) {
                     on ? "bg-soft text-ink" : "text-ink-2 hover:bg-soft",
                   )}
                 >
-                  <Icon name={n.icon} size={22} fill={on} />
+                  <n.icon size={22} strokeWidth={on ? 2.5 : 2} aria-hidden />
                   {n.label}
                 </Link>
               );
@@ -222,7 +223,7 @@ function Shell({ children }: { children: React.ReactNode }) {
             const on = isActive(n) && !moreOpen;
             return (
               <Link key={n.href} href={n.href} aria-current={on ? "page" : undefined} className={tabClass(on)}>
-                <Icon name={n.icon} size={24} fill={on} />
+                <n.icon size={24} strokeWidth={on ? 2.5 : 2} aria-hidden />
                 {n.short}
                 {n.exact && pending > 0 ? (
                   <span className="absolute top-0 right-[22%] rounded-full bg-star px-1.5 text-[10px] font-extrabold text-ink">
@@ -239,7 +240,7 @@ function Shell({ children }: { children: React.ReactNode }) {
             onClick={() => setMoreOpen((v) => !v)}
             className={tabClass(moreActive || moreOpen)}
           >
-            <Icon name={moreOpen ? "close" : "more_horiz"} size={24} />
+            {moreOpen ? <X size={24} aria-hidden /> : <Ellipsis size={24} aria-hidden />}
             Mais
           </button>
         </nav>
