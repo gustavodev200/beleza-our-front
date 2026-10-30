@@ -74,6 +74,40 @@ function LinkCard({ b }: { b: OwnerBusiness }) {
   );
 }
 
+/** Salva na hora: não depende do "Salvar dados" nem da validação do formulário. */
+function ConfirmationToggle({ b }: { b: OwnerBusiness }) {
+  const qc = useQueryClient();
+  const save = useMutation({
+    mutationFn: (requiresConfirmation: boolean) =>
+      api<OwnerBusiness>("/owner/business", { method: "PATCH", body: { requiresConfirmation } }),
+    onSuccess: (data) => {
+      qc.setQueryData(ownerKeys.business, data);
+      toast(
+        data.requiresConfirmation
+          ? "Confirmação manual ligada — novos agendamentos chegam como pendentes"
+          : "Confirmação manual desligada — agendamentos do app já chegam confirmados",
+      );
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+  const checked = save.isPending ? (save.variables ?? b.requiresConfirmation) : b.requiresConfirmation;
+
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-[10px] border border-line px-3 py-2 text-sm">
+      <span>
+        <b className="block">Confirmar agendamentos manualmente</b>
+        <span className="text-xs text-muted">Agendamentos do app chegam como pendentes até você confirmar.</span>
+      </span>
+      <Toggle
+        checked={checked}
+        onChange={(v) => save.mutate(v)}
+        disabled={save.isPending}
+        label="Confirmar manualmente"
+      />
+    </div>
+  );
+}
+
 function DetailsForm({ b }: { b: OwnerBusiness }) {
   const qc = useQueryClient();
   const categories = useCategories();
@@ -85,7 +119,6 @@ function DetailsForm({ b }: { b: OwnerBusiness }) {
     address: b.address ?? "",
     description: b.description ?? "",
     categoryIds: b.categories.map((c) => c.id),
-    requiresConfirmation: b.requiresConfirmation,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
@@ -115,7 +148,7 @@ function DetailsForm({ b }: { b: OwnerBusiness }) {
     if (!form.categoryIds.length) errs.categoryIds = "Escolha ao menos uma categoria";
     setErrors(errs);
     if (!parsed.success || errs.categoryIds) return;
-    save.mutate({ ...parsed.data, categoryIds: form.categoryIds, requiresConfirmation: form.requiresConfirmation });
+    save.mutate({ ...parsed.data, categoryIds: form.categoryIds });
   };
 
   return (
@@ -198,17 +231,7 @@ function DetailsForm({ b }: { b: OwnerBusiness }) {
           </p>
         ) : null}
       </div>
-      <div className="flex items-center justify-between gap-3 rounded-[10px] border border-line px-3 py-2 text-sm">
-        <span>
-          <b className="block">Confirmar agendamentos manualmente</b>
-          <span className="text-xs text-muted">Agendamentos do app chegam como pendentes até você confirmar.</span>
-        </span>
-        <Toggle
-          checked={form.requiresConfirmation}
-          onChange={(v) => set({ requiresConfirmation: v })}
-          label="Confirmar manualmente"
-        />
-      </div>
+      <ConfirmationToggle b={b} />
       <Button type="submit" loading={save.isPending} className="self-start">
         Salvar dados
       </Button>
