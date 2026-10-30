@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { Spinner } from "@/components/ui/states";
 import { apiSilent } from "./api";
 import { authClient } from "./auth-client";
+import { disablePush } from "./push";
 import type { Me, Role } from "./types";
 
 export const meKey = ["me"] as const;
@@ -33,6 +34,9 @@ export function useSignOut() {
   const router = useRouter();
   return async (to = "/") => {
     try {
+      // Antes de encerrar a sessão (a API exige login): este aparelho deixa de
+      // receber push da conta que está saindo.
+      await disablePush().catch(() => undefined);
       await authClient.signOut();
     } finally {
       qc.clear();

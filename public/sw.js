@@ -9,10 +9,12 @@
 //   - Imagens: stale-while-revalidate com limite de itens e expiração.
 //   - Resposta com Cache-Control no-store/private nunca entra em cache.
 //   - Sem skipWaiting automático.
+//   - Push (Web Push/VAPID): mostra a notificação e, ao tocar, foca uma aba
+//     aberta do app ou abre a rota enviada pela API (só caminhos internos).
 //
 // Ao mudar a lógica, incremente VERSION — caches antigos são apagados no activate.
 
-const VERSION = "v1";
+const VERSION = "v2";
 const PREFIX = "belezaour-";
 const STATIC_CACHE = `${PREFIX}static-${VERSION}`;
 const IMAGE_CACHE = `${PREFIX}images-${VERSION}`;
@@ -137,4 +139,47 @@ async function staleWhileRevalidate(event, request) {
 async function trim(cache, max) {
   const keys = await cache.keys();
   for (let i = 0; i < keys.length - max; i++) await cache.delete(keys[i]);
+}
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : "" };
+  }
+  const title = typeof data.title === "string" && data.title ? data.title : "belezaOur";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: typeof data.body === "string" ? data.body : "",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: typeof data.tag === "string" ? data.tag : undefined,
+      renotify: Boolean(data.tag),
+      lang: "pt-BR",
+      data: { url: safePath(data.url) },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL(safePath(event.notification.data && event.notification.data.url), self.location.origin);
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const open = windows.find((c) => new URL(c.url).origin === self.location.origin);
+      if (open) {
+        await open.focus();
+        if ("navigate" in open) await open.navigate(target.href).catch(() => undefined);
+        return;
+      }
+      await self.clients.openWindow(target.href);
+    })(),
+  );
+});
+
+// Só caminho interno ("/x", nunca "//host" nem URL absoluta): o push não vira redirecionamento aberto.
+function safePath(url) {
+  return typeof url === "string" && url.startsWith("/") && !url.startsWith("//") ? url : "/";
 }

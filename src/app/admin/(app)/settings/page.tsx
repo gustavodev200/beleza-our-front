@@ -143,11 +143,14 @@ export default function SettingsPage() {
                 ))}
               </div>
             </Row>
-            <Row title="Lembretes automáticos no WhatsApp" sub="24h e 2h antes do horário">
+            <Row
+              title="Lembretes automáticos"
+              sub="Cliente e dono: e-mail e notificação no app 15 min antes e na hora. Cliente: WhatsApp 24h e 2h antes"
+            >
               <Toggle
                 checked={s.remindersEnabled}
                 onChange={(v) => set({ remindersEnabled: v })}
-                label="Lembretes no WhatsApp"
+                label="Lembretes automáticos"
                 disabled={update.isPending}
               />
             </Row>

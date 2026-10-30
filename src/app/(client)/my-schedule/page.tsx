@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 import { useOwnerAction } from "@/components/owner/appointment-drawer";
+import { PushOptIn } from "@/components/pwa/push-opt-in";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/controls";
 import { ErrorState, ListSkeleton, Notice } from "@/components/ui/states";
@@ -54,6 +55,7 @@ function MyAgenda() {
           Painel completo
         </Link>
       </div>
+      <PushOptIn audience="owner" className="mb-3" />
       <div className="grid grid-cols-6 gap-1.5">
         {Array.from({ length: DAYS }, (_, i) => addDays(today, i)).map((d) => {
           const on = d === day;

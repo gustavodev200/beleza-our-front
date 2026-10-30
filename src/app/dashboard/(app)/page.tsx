@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { AppointmentDrawer, useOwnerAction } from "@/components/owner/appointment-drawer";
 import { useOverview, usePanel } from "@/components/owner/panel-shell";
+import { PushOptIn } from "@/components/pwa/push-opt-in";
 import { Button } from "@/components/ui/button";
 import { Badge, PageTitle } from "@/components/ui/controls";
 import { ErrorState, ListSkeleton } from "@/components/ui/states";
@@ -61,6 +62,7 @@ export default function OverviewPage() {
           Bloquear horário
         </Button>
       </div>
+      <PushOptIn audience="owner" className="mt-4" />
 
       {q.isPending ? (
         <ListSkeleton rows={3} className="mt-5" />
