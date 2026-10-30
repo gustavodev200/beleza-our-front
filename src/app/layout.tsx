@@ -44,7 +44,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   await headers();
   return (
     <html lang="pt-BR" className={noto.variable}>
-      <body className="min-h-dvh">
+      {/* Extensões do navegador (ex.: ColorZilla) injetam atributos no body antes da hidratação. */}
+      <body className="min-h-dvh" suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>
