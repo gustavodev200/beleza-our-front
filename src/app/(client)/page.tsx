@@ -1,4 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
+import heroBarbershop from "@/assets/hero/barbershop.webp";
+import heroSalon from "@/assets/hero/salon.webp";
 import { CompactCard, FeaturedCard, bookingHref } from "@/components/client/business-cards";
 import { UnservedCity } from "@/components/client/unserved-city";
 import { buttonVariants } from "@/components/ui/button";
@@ -91,8 +94,27 @@ export default async function HomePage() {
           </div>
         </div>
         <div className="relative grid h-[480px] min-w-0 grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-3.5">
-          <div className="h-[440px] rounded-[28px] bg-[repeating-linear-gradient(135deg,oklch(0.9_0.035_20)_0_12px,oklch(0.875_0.042_20)_12px_24px)]" />
-          <div className="mt-20 h-[400px] rounded-[28px] bg-[repeating-linear-gradient(135deg,oklch(0.9_0.035_210)_0_12px,oklch(0.875_0.042_210)_12px_24px)]" />
+          {/* Hero só aparece no desktop: lazy evita baixar as fotos no celular. */}
+          <div className="relative h-[440px] overflow-hidden rounded-[28px] bg-[oklch(0.9_0.035_20)]">
+            <Image
+              src={heroSalon}
+              alt="Cabeleireira finalizando escova em cliente sorridente no salão"
+              fill
+              sizes="300px"
+              placeholder="blur"
+              className="object-cover"
+            />
+          </div>
+          <div className="relative mt-20 h-[400px] overflow-hidden rounded-[28px] bg-[oklch(0.9_0.035_210)]">
+            <Image
+              src={heroBarbershop}
+              alt="Barbeiro cortando o cabelo de cliente na barbearia"
+              fill
+              sizes="280px"
+              placeholder="blur"
+              className="object-cover"
+            />
+          </div>
           {/* Sem horário real na API, o card continua visível e leva para /explore. */}
           <Link
             href={
